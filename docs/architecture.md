@@ -260,3 +260,9 @@ The architecture should support future additions without redesigning the core lo
 - asynchronous multiplayer
 - AI-controlled factions through the same legal-move interface
 - analytics, replay, and moderation tooling
+
+## Maintenance notes
+
+- Keep the backend API tests lightweight and focused on the canonical MVP loop
+- Prefer end-to-end route coverage for session creation, turn submission, bot follow-up persistence, and advisor contract validation
+- Keep provider and persistence seams covered through the default mock + in-memory runtime path unless a specific database/provider path needs separate regression coverage

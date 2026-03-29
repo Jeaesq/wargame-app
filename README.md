@@ -130,6 +130,12 @@ npm run build
 npm run typecheck
 ```
 
+Backend API tests:
+
+```bash
+npm run test -w @wargame/api
+```
+
 ## Notes
 
 - The repository is set up as a workspace monorepo using npm workspaces.
@@ -137,3 +143,4 @@ npm run typecheck
 - The backend supports both in-memory and PostgreSQL-backed persistence.
 - Scenario definitions are still code-defined; the database currently stores canonical game sessions and turn history.
 - The PostgreSQL schema is managed through SQL migrations in [apps/api/src/db/migrations/001_init.sql](/Users/joshanderson/Documents/Creative/Codex%20-%20ChatGPT%20Codex/wargame-app/apps/api/src/db/migrations/001_init.sql).
+- A concise developer validation checklist lives in [docs/developer-validation.md](/Users/joshanderson/Documents/Creative/Codex%20-%20ChatGPT%20Codex/wargame-app/docs/developer-validation.md).
