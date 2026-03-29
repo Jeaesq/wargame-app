@@ -1,19 +1,20 @@
-import { advisorAnswerSchema } from "@wargame/shared";
-import { randomUUID } from "node:crypto";
-import type { AdvisorService, GenerateAdvisorAnswerInput } from "./types.js";
+import { advisorResponsePayloadSchema } from "@wargame/shared";
+import type {
+  AdvisorResponseProvider,
+  AdvisorResponseProviderInput
+} from "../types.js";
 
-export class StaticAdvisorService implements AdvisorService {
-  constructor(private readonly now: () => string) {}
-
-  async generateAdvisorAnswer(input: GenerateAdvisorAnswerInput) {
+export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
+  async generateAdvisorResponse(
+    input: AdvisorResponseProviderInput
+  ): Promise<unknown> {
     const normalizedQuestion = input.question.trim().toLowerCase();
-    const { context } = input;
-    const rankedOptions = [...context.visibleOptions].sort(
+    const rankedOptions = [...input.context.visibleOptions].sort(
       (left, right) =>
         (right.recommendationPercent ?? 0) - (left.recommendationPercent ?? 0)
     );
     const topOption = rankedOptions[0];
-    const publicState = context.publicState;
+    const publicState = input.context.publicState;
     const asksAboutRisk =
       normalizedQuestion.includes("risk") ||
       normalizedQuestion.includes("danger") ||
@@ -30,7 +31,7 @@ export class StaticAdvisorService implements AdvisorService {
     let shortAnswer = "The visible situation remains manageable but tense.";
     let rationale = [
       `Public world tension is currently ${publicState.worldTension}%.`,
-      `There are ${context.visibleOptions.length} visible option(s) available from this perspective.`
+      `There are ${input.context.visibleOptions.length} visible option(s) available from this perspective.`
     ];
     let confidenceLabel: "low" | "medium" | "high" | "uncertain" = "medium";
     let summary =
@@ -48,8 +49,8 @@ export class StaticAdvisorService implements AdvisorService {
         "This answer excludes hidden intelligence and uses only player-visible information."
       ];
 
-      if (context.visibleWarnings.length > 0) {
-        rationale.push(`Visible warning: ${context.visibleWarnings[0]}`);
+      if (input.context.visibleWarnings.length > 0) {
+        rationale.push(`Visible warning: ${input.context.visibleWarnings[0]}`);
       }
 
       confidenceLabel = publicState.worldTension >= 60 ? "high" : "medium";
@@ -61,7 +62,8 @@ export class StaticAdvisorService implements AdvisorService {
         `Public tension is ${publicState.worldTension}%, so visible signaling still matters.`,
         "This answer is limited to currently visible options and public state."
       ];
-      confidenceLabel = (topOption.recommendationPercent ?? 0) >= 65 ? "high" : "medium";
+      confidenceLabel =
+        (topOption.recommendationPercent ?? 0) >= 65 ? "high" : "medium";
     } else if (asksAboutTension) {
       shortAnswer = `The public situation is defined by ${publicState.headline?.toLowerCase() ?? "an active crisis"}.`;
       summary =
@@ -82,18 +84,15 @@ export class StaticAdvisorService implements AdvisorService {
       ];
     }
 
-    return advisorAnswerSchema.parse({
-      answerId: randomUUID(),
-      gameId: context.gameId,
-      turnNumber: context.turnNumber,
-      perspectiveFactionId: context.factionId,
-      question: input.question,
+    return advisorResponsePayloadSchema.parse({
       summary,
       shortAnswer,
       rationale:
         topOption || asksAboutRisk || asksAboutTension
           ? rationale
-          : ["No visible option or public-state signal was strong enough to support a clearer answer."],
+          : [
+              "No visible option or public-state signal was strong enough to support a clearer answer."
+            ],
       recommendationBand:
         topOption && asksAboutOptions ? "medium" : asksAboutRisk ? "uncertain" : "medium",
       confidenceLabel,
@@ -108,8 +107,7 @@ export class StaticAdvisorService implements AdvisorService {
         "No hidden intelligence or external LLM call has been used in this placeholder implementation."
       ],
       metadata: {
-        provider: "static-advisor",
-        generatedAt: this.now()
+        provider: "mock-advisor-response"
       }
     });
   }

@@ -56,6 +56,7 @@ API_BASE_URL=http://localhost:4000 npm run dev:web
 ## Run with PostgreSQL
 
 The backend supports `PERSISTENCE_MODE=postgres` for database-backed session and turn persistence.
+LLM-facing behavior is currently served by the default mock provider selected with `AI_PROVIDER_MODE=mock`.
 
 ### 1. Start PostgreSQL locally
 
@@ -92,6 +93,14 @@ PERSISTENCE_MODE=postgres DATABASE_URL=postgres://wargame:wargame@localhost:5432
 ```
 
 If `PERSISTENCE_MODE=postgres` is selected without `DATABASE_URL`, the API exits immediately with a clear configuration error.
+
+## Provider mode
+
+The backend now routes turn narration support, bot decision support, and advisor answers through a provider layer.
+
+- `AI_PROVIDER_MODE=mock` is the current default
+- the backend still owns canonical state, legal actions, validation, and persistence
+- future real LLM-backed providers can be added behind the same composition seam without changing the frontend API
 
 ## Other commands
 

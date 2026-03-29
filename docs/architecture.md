@@ -200,6 +200,24 @@ Backend stores the updated session and turn record, then returns the appropriate
 - summarize consequences after backend resolution
 - add uncertainty and thematic texture without changing state authority
 
+## Provider seam
+
+The backend should treat narrative and strategy generation as a replaceable provider concern, not as core game-state logic.
+
+- `prompt/input preparation`: application services prepare provider inputs from canonical public, private, and derived state
+- `provider invocation`: a provider implementation is called with structured inputs
+- `output validation`: provider outputs are validated against shared Zod schemas before use
+- `canonical application`: backend services apply validated artifacts into canonical game state
+
+Current default:
+
+- mock provider implementations for turn generation, bot decision support, and advisor answers
+
+Future extension:
+
+- an OpenAI-backed provider can be selected through configuration without changing routes, repositories, or frontend contracts
+- provider outputs should stay narrow and non-authoritative, for example narrative text, tags, and ranked suggestions rather than direct state mutations
+
 ### Frontend responsibilities
 
 - render current public/private views

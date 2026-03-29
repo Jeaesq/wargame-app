@@ -192,6 +192,42 @@ export const llmNarrativeUpdateSchema = z.object({
   metadata: metadataSchema
 });
 
+export const privateTurnSummarySchema = z.object({
+  playerId: z.string().min(1).nullable().default(null),
+  factionId: z.string().min(1),
+  summary: z.string().min(1),
+  tags: tagsSchema
+});
+
+export const turnGenerationArtifactsSchema = z.object({
+  publicSummary: z.string().min(1),
+  privateSummaries: z.array(privateTurnSummarySchema).default([]),
+  effects: z.array(z.string()).default([]),
+  recommendationLabels: tagsSchema,
+  riskLabels: tagsSchema,
+  llmNarrative: llmNarrativeUpdateSchema,
+  metadata: metadataSchema
+});
+
+export const botDecisionPayloadSchema = z.object({
+  optionId: z.string().min(1),
+  rationale: z.string().min(1),
+  metadata: metadataSchema
+});
+
+export const advisorResponsePayloadSchema = z.object({
+  summary: z.string().min(1),
+  shortAnswer: z.string().min(1),
+  rationale: z.array(z.string()).min(1),
+  recommendationBand: recommendationBandSchema,
+  confidenceLabel: z.enum(["low", "medium", "high", "uncertain"]),
+  recommendedOptionIds: z.array(z.string()).default([]),
+  confidencePercent: z.number().min(0).max(100),
+  riskNotes: z.array(z.string()).default([]),
+  assumptions: z.array(z.string()).default([]),
+  metadata: metadataSchema
+});
+
 export const resolvedActionSummarySchema = z.object({
   optionId: z.string().min(1),
   title: z.string().min(1),
@@ -226,16 +262,7 @@ export const turnResolutionSchema = z.object({
   actor: resolvedActorSchema,
   selectedAction: resolvedActionSummarySchema,
   publicSummary: z.string().min(1),
-  privateSummaries: z
-    .array(
-      z.object({
-        playerId: z.string().min(1).nullable().default(null),
-        factionId: z.string().min(1),
-        summary: z.string().min(1),
-        tags: tagsSchema
-      })
-    )
-    .default([]),
+  privateSummaries: z.array(privateTurnSummarySchema).default([]),
   effects: z.array(z.string()).default([]),
   stateChanges: z.array(stateChangeSchema).default([]),
   updatedTracks: statsMapSchema,
@@ -379,6 +406,9 @@ export type TurnResolution = z.infer<typeof turnResolutionSchema>;
 export type AdvisorAnswer = z.infer<typeof advisorAnswerSchema>;
 export type ScenarioDefinition = z.infer<typeof scenarioDefinitionSchema>;
 export type ChoiceOption = z.infer<typeof choiceOptionSchema>;
+export type TurnGenerationArtifacts = z.infer<typeof turnGenerationArtifactsSchema>;
+export type BotDecisionPayload = z.infer<typeof botDecisionPayloadSchema>;
+export type AdvisorResponsePayload = z.infer<typeof advisorResponsePayloadSchema>;
 export type ResolvedActionSummary = z.infer<typeof resolvedActionSummarySchema>;
 export type ResolvedActor = z.infer<typeof resolvedActorSchema>;
 export type StateChange = z.infer<typeof stateChangeSchema>;
