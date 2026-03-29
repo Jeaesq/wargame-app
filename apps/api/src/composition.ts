@@ -4,6 +4,10 @@ import { createPostgresPool } from "./db/pool.js";
 import { MockAdvisorResponseProvider } from "./providers/mock/mock-advisor-response-provider.js";
 import { MockBotDecisionProvider } from "./providers/mock/mock-bot-decision-provider.js";
 import { MockTurnGenerationProvider } from "./providers/mock/mock-turn-generation-provider.js";
+import { OpenAIAdvisorResponseProvider } from "./providers/openai/openai-advisor-response-provider.js";
+import { OpenAIBotDecisionProvider } from "./providers/openai/openai-bot-decision-provider.js";
+import { OpenAITurnGenerationProvider } from "./providers/openai/openai-turn-generation-provider.js";
+import { OpenAIResponsesClient } from "./providers/openai/response-client.js";
 import type {
   AdvisorResponseProvider,
   BotDecisionProvider,
@@ -68,6 +72,21 @@ function createProviders(config: AppConfig): {
         botDecisionProvider: new MockBotDecisionProvider(),
         advisorResponseProvider: new MockAdvisorResponseProvider()
       };
+    case "openai": {
+      const openai = config.providers.openai;
+
+      if (!openai) {
+        throw new Error("OpenAI provider mode requires server-side OpenAI config.");
+      }
+
+      const client = new OpenAIResponsesClient(openai);
+
+      return {
+        turnGenerationProvider: new OpenAITurnGenerationProvider(client),
+        botDecisionProvider: new OpenAIBotDecisionProvider(client),
+        advisorResponseProvider: new OpenAIAdvisorResponseProvider(client)
+      };
+    }
   }
 }
 

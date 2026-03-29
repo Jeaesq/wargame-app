@@ -22,5 +22,11 @@ export class ValidationError extends AppError {
   }
 }
 
+export class ProviderInvocationError extends AppError {
+  constructor(message: string, details?: unknown) {
+    super(502, "PROVIDER_INVOCATION_ERROR", message, details);
+  }
+}
+
 export const isAppError = (error: unknown): error is AppError =>
   error instanceof AppError;

@@ -218,6 +218,13 @@ Future extension:
 - an OpenAI-backed provider can be selected through configuration without changing routes, repositories, or frontend contracts
 - provider outputs should stay narrow and non-authoritative, for example narrative text, tags, and ranked suggestions rather than direct state mutations
 
+Initial OpenAI seam:
+
+- provider mode is selected through backend configuration
+- OpenAI integration is split into prompt construction, API invocation, schema validation, and mapping layers
+- OpenAI remains optional and non-default during development
+- the current OpenAI module is a skeleton for future Responses API work, not a production-complete integration
+
 ### Frontend responsibilities
 
 - render current public/private views

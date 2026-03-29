@@ -99,8 +99,29 @@ If `PERSISTENCE_MODE=postgres` is selected without `DATABASE_URL`, the API exits
 The backend now routes turn narration support, bot decision support, and advisor answers through a provider layer.
 
 - `AI_PROVIDER_MODE=mock` is the current default
+- `AI_PROVIDER_MODE=openai` enables the non-default OpenAI Responses API skeleton
 - the backend still owns canonical state, legal actions, validation, and persistence
 - future real LLM-backed providers can be added behind the same composition seam without changing the frontend API
+
+### OpenAI provider skeleton
+
+The repository now includes a server-side OpenAI provider module designed for future Responses API integration. It is not the default runtime path and is intentionally not yet production-complete.
+
+Enable it only when you want to test that integration seam:
+
+```bash
+AI_PROVIDER_MODE=openai OPENAI_API_KEY=your_key OPENAI_MODEL=your_model npm run dev:api
+```
+
+Optional:
+
+- `OPENAI_BASE_URL` defaults to `https://api.openai.com/v1`
+
+Notes:
+
+- all OpenAI secrets stay server-side in the API environment only
+- normal local development does not require OpenAI credentials
+- canonical state still remains backend-owned; the provider returns structured artifacts only
 
 ## Other commands
 

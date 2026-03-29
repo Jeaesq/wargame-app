@@ -1,14 +1,17 @@
 import { z } from "zod";
 
 const persistenceModeSchema = z.enum(["memory", "postgres"]);
-const providerModeSchema = z.enum(["mock"]);
+const providerModeSchema = z.enum(["mock", "openai"]);
 
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   PERSISTENCE_MODE: persistenceModeSchema.default("memory"),
   AI_PROVIDER_MODE: providerModeSchema.default("mock"),
   DATABASE_URL: z.string().min(1).optional(),
-  PG_POOL_MAX: z.coerce.number().int().positive().default(10)
+  PG_POOL_MAX: z.coerce.number().int().positive().default(10),
+  OPENAI_API_KEY: z.string().min(1).optional(),
+  OPENAI_MODEL: z.string().min(1).optional(),
+  OPENAI_BASE_URL: z.string().url().default("https://api.openai.com/v1")
 });
 
 export class ConfigError extends Error {
@@ -28,6 +31,11 @@ export type AppConfig = {
   };
   providers: {
     mode: ProviderMode;
+    openai: {
+      apiKey: string;
+      model: string;
+      baseUrl: string;
+    } | null;
   };
   database: {
     url: string;
@@ -69,13 +77,33 @@ export function getAppConfig(): AppConfig {
     );
   }
 
+  if (env.AI_PROVIDER_MODE === "openai" && !env.OPENAI_API_KEY) {
+    throw new ConfigError(
+      "AI_PROVIDER_MODE=openai requires OPENAI_API_KEY to be set."
+    );
+  }
+
+  if (env.AI_PROVIDER_MODE === "openai" && !env.OPENAI_MODEL) {
+    throw new ConfigError(
+      "AI_PROVIDER_MODE=openai requires OPENAI_MODEL to be set."
+    );
+  }
+
   cachedConfig = {
     port: env.PORT,
     persistence: {
       mode: env.PERSISTENCE_MODE
     },
     providers: {
-      mode: env.AI_PROVIDER_MODE
+      mode: env.AI_PROVIDER_MODE,
+      openai:
+        env.OPENAI_API_KEY && env.OPENAI_MODEL
+          ? {
+              apiKey: env.OPENAI_API_KEY,
+              model: env.OPENAI_MODEL,
+              baseUrl: env.OPENAI_BASE_URL
+            }
+          : null
     },
     database: env.DATABASE_URL
       ? {
