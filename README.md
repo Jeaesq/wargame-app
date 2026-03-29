@@ -22,13 +22,17 @@ npm install
 
 ## Run the apps
 
-Start the frontend:
+Start both apps together:
+
+```bash
+npm run dev
+```
+
+Or start them separately in two terminals:
 
 ```bash
 npm run dev:web
 ```
-
-Start the backend in another terminal:
 
 ```bash
 npm run dev:api
@@ -38,6 +42,14 @@ Default local URLs:
 
 - Web: `http://localhost:3000`
 - API: `http://localhost:4000`
+
+The web app expects the API at `http://localhost:4000` by default. If you need a different backend URL for the Next.js server, set `API_BASE_URL` before starting `dev:web`.
+
+Example:
+
+```bash
+API_BASE_URL=http://localhost:4000 npm run dev:web
+```
 
 ## Other commands
 

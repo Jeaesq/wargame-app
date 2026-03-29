@@ -27,8 +27,6 @@ export default function RootLayout({
             <nav className="topbar__nav" aria-label="Primary">
               <Link href="/">Home</Link>
               <Link href="/games/new">New Game</Link>
-              <Link href="/games/mock-game-1">Current Game</Link>
-              <Link href="/games/mock-game-1/turn">Turn View</Link>
             </nav>
           </header>
           {children}

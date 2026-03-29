@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "build": "npm run build -w @wargame/shared && npm run build -w @wargame/api && npm run build -w @wargame/web",
+    "dev": "node scripts/dev.mjs",
     "dev:api": "npm run build -w @wargame/shared && npm run dev -w @wargame/api",
     "dev:web": "npm run build -w @wargame/shared && npm run dev -w @wargame/web",
     "postinstall": "npm run build -w @wargame/shared",
