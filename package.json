@@ -1,0 +1,23 @@
+{
+  "name": "wargame-app",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @wargame/shared && npm run build -w @wargame/api && npm run build -w @wargame/web",
+    "dev:api": "npm run build -w @wargame/shared && npm run dev -w @wargame/api",
+    "dev:web": "npm run build -w @wargame/shared && npm run dev -w @wargame/web",
+    "postinstall": "npm run build -w @wargame/shared",
+    "typecheck": "npm run build -w @wargame/shared && npm run typecheck -w @wargame/api && npm run typecheck -w @wargame/web"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.1",
+    "typescript": "^5.9.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

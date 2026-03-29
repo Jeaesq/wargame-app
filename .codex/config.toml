@@ -1,0 +1,4 @@
+model = "gpt-5-codex"
+
+[projects."/Users/joshanderson/Documents/Creative/Codex - ChatGPT Codex/wargame-app"]
+trust_level = "trusted"
