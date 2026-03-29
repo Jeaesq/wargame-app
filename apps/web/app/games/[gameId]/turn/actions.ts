@@ -1,10 +1,10 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { submitTurn } from "../../../../lib/api";
 
 export type TurnFormActionState = {
   error?: string;
+  redirectTo?: string;
 };
 
 export async function submitTurnAction(
@@ -27,7 +27,9 @@ export async function submitTurnAction(
       }
     });
 
-    redirect(`/games/${gameId}`);
+    return {
+      redirectTo: `/games/${gameId}`
+    };
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Unable to submit turn."

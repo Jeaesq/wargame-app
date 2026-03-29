@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Game } from "@wargame/shared";
 import { submitTurnAction, type TurnFormActionState } from "../app/games/[gameId]/turn/actions";
 
@@ -11,7 +12,9 @@ type TurnActionFormProps = {
 };
 
 export function TurnActionForm({ game }: TurnActionFormProps) {
+  const router = useRouter();
   const [state, formAction, pending] = useActionState(submitTurnAction, initialState);
+  const [selectedOptionId, setSelectedOptionId] = useState<string>("");
   const actingPlayer =
     game.players.find(
       (player) => player.role === "human" && player.factionId === game.currentFactionId
@@ -19,6 +22,18 @@ export function TurnActionForm({ game }: TurnActionFormProps) {
   const privateState = game.state.privateByPlayer.find(
     (state) => state.playerId === actingPlayer?.id
   );
+  const selectedOption = useMemo(
+    () =>
+      privateState?.availableOptions.find((option) => option.id === selectedOptionId) ?? null,
+    [privateState?.availableOptions, selectedOptionId]
+  );
+
+  useEffect(() => {
+    if (state.redirectTo) {
+      router.push(state.redirectTo);
+      router.refresh();
+    }
+  }, [router, state.redirectTo]);
 
   if (!actingPlayer || !actingPlayer.factionId) {
     return (
@@ -41,15 +56,17 @@ export function TurnActionForm({ game }: TurnActionFormProps) {
         <input name="gameId" type="hidden" value={game.id} />
         <input name="playerId" type="hidden" value={actingPlayer.id} />
         <input name="factionId" type="hidden" value={actingPlayer.factionId} />
+        <input name="optionId" type="hidden" value={selectedOptionId} />
         <div className="section-stack">
           {(privateState?.availableOptions ?? []).map((option) => (
             <button
-              className="option-card option-button"
+              className={`option-card option-button ${
+                selectedOptionId === option.id ? "option-button--selected" : ""
+              }`}
               disabled={pending}
               key={option.id}
-              name="optionId"
-              type="submit"
-              value={option.id}
+              onClick={() => setSelectedOptionId(option.id)}
+              type="button"
             >
               <div className="panel__header">
                 <strong>{option.title}</strong>
@@ -59,6 +76,28 @@ export function TurnActionForm({ game }: TurnActionFormProps) {
               <span className="muted">{option.kind.replaceAll("_", " ")}</span>
             </button>
           ))}
+        </div>
+        {selectedOption ? (
+          <div className="selection-summary">
+            <strong>Selected option</strong>
+            <p>{selectedOption.title}</p>
+            <p className="muted">{selectedOption.summary}</p>
+          </div>
+        ) : (
+          <p className="muted">Select one option before confirming your turn.</p>
+        )}
+        <div className="hero__actions">
+          <button
+            className="button"
+            disabled={pending || !selectedOption}
+            type="submit"
+          >
+            {pending
+              ? "Submitting..."
+              : selectedOption
+                ? "Confirm and submit action"
+                : "Select an option first"}
+          </button>
         </div>
         {!privateState?.availableOptions.length ? (
           <p className="muted">No private action options are available for this player right now.</p>

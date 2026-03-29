@@ -271,6 +271,11 @@ textarea {
   cursor: pointer;
 }
 
+.option-button--selected {
+  border-color: var(--accent);
+  background: rgba(141, 63, 47, 0.08);
+}
+
 .option-card__meta,
 .inline-meta {
   display: flex;
@@ -349,6 +354,12 @@ textarea {
   margin: 0;
   color: var(--accent);
   font-weight: 600;
+}
+
+.selection-summary {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.6);
+  padding: 0.9rem;
 }
 
 .section-stack {

@@ -64,7 +64,8 @@ export function registerGameRoutes(router: Router): void {
       now: services.now(),
       scenario,
       mode: input.mode,
-      requestedPlayers: input.players
+      requestedPlayers: input.players,
+      targetGameLength: input.targetGameLength
     });
 
     await services.gameRepository.saveGame(game);

@@ -57,6 +57,7 @@ export const recommendationBandSchema = z.enum([
   "uncertain"
 ]);
 export const scenarioComplexitySchema = z.enum(["introductory", "standard", "advanced"]);
+export const targetGameLengthSchema = z.enum(["short", "medium", "long"]);
 
 export const factionSchema = z.object({
   id: z.string().min(1),
@@ -301,12 +302,16 @@ export const gameSchema = z.object({
   lastResolution: turnResolutionSchema.nullable().default(null),
   createdAt: isoTimestampSchema,
   updatedAt: isoTimestampSchema,
+  sessionConfig: z.object({
+    targetGameLength: targetGameLengthSchema.default("medium")
+  }),
   metadata: metadataSchema
 });
 
 export const createGameRequestSchema = z.object({
   scenarioId: z.string().min(1),
   mode: gameModeSchema,
+  targetGameLength: targetGameLengthSchema.default("medium"),
   players: z
     .array(
       z.object({
@@ -362,6 +367,7 @@ export type ChoiceVisibility = z.infer<typeof choiceVisibilitySchema>;
 export type ResolutionStatus = z.infer<typeof resolutionStatusSchema>;
 export type RecommendationBand = z.infer<typeof recommendationBandSchema>;
 export type ScenarioComplexity = z.infer<typeof scenarioComplexitySchema>;
+export type TargetGameLength = z.infer<typeof targetGameLengthSchema>;
 export type Game = z.infer<typeof gameSchema>;
 export type Player = z.infer<typeof playerSchema>;
 export type Faction = z.infer<typeof factionSchema>;

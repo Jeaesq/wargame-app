@@ -9,6 +9,9 @@ export default async function HomePage() {
   const [scenarios, games] = await Promise.all([getScenarios(), getGames()]);
   const leadScenario = scenarios[0];
   const latestGame = games[games.length - 1];
+  const sortedGames = [...games].sort(
+    (left, right) => right.updatedAt.localeCompare(left.updatedAt)
+  );
 
   return (
     <main className="page page--centered">
@@ -46,6 +49,20 @@ export default async function HomePage() {
                 ? `Most recent game is on turn ${latestGame.turnNumber}.`
                 : "No in-memory games created yet."}
             </p>
+            <div className="subtle-divider" />
+            <ul className="list">
+              {sortedGames.length ? (
+                sortedGames.map((game) => (
+                  <li className="list-item" key={game.id}>
+                    <Link href={`/games/${game.id}`}>
+                      Turn {game.turnNumber} · {game.factions.find((faction) => faction.id === game.currentFactionId)?.name ?? "Pending"} · {game.sessionConfig.targetGameLength}
+                    </Link>
+                  </li>
+                ))
+              ) : (
+                <li className="list-item muted">No active sessions yet.</li>
+              )}
+            </ul>
           </article>
           <article className="panel">
             <p className="eyebrow">Interface Goal</p>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import type { ScenarioDefinition } from "@wargame/shared";
 import { createGameAction, type FormActionState } from "../app/games/new/actions";
 
@@ -11,8 +12,16 @@ type CreateGameFormProps = {
 };
 
 export function CreateGameForm({ scenarios }: CreateGameFormProps) {
+  const router = useRouter();
   const [state, formAction, pending] = useActionState(createGameAction, initialState);
   const scenario = scenarios[0];
+
+  useEffect(() => {
+    if (state.redirectTo) {
+      router.push(state.redirectTo);
+      router.refresh();
+    }
+  }, [router, state.redirectTo]);
 
   return (
     <form action={formAction} className="panel form-card">
@@ -45,6 +54,14 @@ export function CreateGameForm({ scenarios }: CreateGameFormProps) {
                 {faction.name}
               </option>
             ))}
+          </select>
+        </label>
+        <label className="field">
+          <span>Target Game Length</span>
+          <select defaultValue="medium" name="targetGameLength">
+            <option value="short">Short (~10 turns)</option>
+            <option value="medium">Medium (~20 turns)</option>
+            <option value="long">Long (~30 turns)</option>
           </select>
         </label>
       </div>

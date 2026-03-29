@@ -13,10 +13,11 @@ type BuildGameFromScenarioInput = {
   scenario: ScenarioDefinition;
   mode: GameMode;
   requestedPlayers: RequestedPlayer[];
+  targetGameLength: "short" | "medium" | "long";
 };
 
 export function buildGameFromScenario(input: BuildGameFromScenarioInput): Game {
-  const { now, mode, requestedPlayers, scenario } = input;
+  const { now, mode, requestedPlayers, scenario, targetGameLength } = input;
   const playableFactions = scenario.factions.filter((faction) => faction.isPlayable);
 
   if (playableFactions.length === 0) {
@@ -152,6 +153,9 @@ export function buildGameFromScenario(input: BuildGameFromScenarioInput): Game {
     lastResolution: null,
     createdAt: now,
     updatedAt: now,
+    sessionConfig: {
+      targetGameLength
+    },
     metadata: {
       scenarioSlug: scenario.slug
     }

@@ -52,6 +52,17 @@ export default async function GameDetailPage({ params }: GameDetailPageProps) {
           <div className="section-stack">
             <section className="section-stack current-state-section">
               <div className="section-label">Current State</div>
+              <section className="panel">
+                <div className="panel__header">
+                  <h2>Session Settings</h2>
+                </div>
+                <div className="inline-meta">
+                  <span className="pill">Mode: {game.mode}</span>
+                  <span className="pill">
+                    Target length: {game.sessionConfig.targetGameLength}
+                  </span>
+                </div>
+              </section>
               {scenario ? <ScenarioBriefing game={game} scenario={scenario} /> : null}
               <PublicStatePanel game={game} />
               <DerivedStatePanel derivedState={game.state.derived} />

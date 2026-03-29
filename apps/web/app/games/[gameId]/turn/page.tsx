@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdvisorChatPanel } from "../../../../components/advisor-chat-panel";
 import { OptionsList } from "../../../../components/options-list";
@@ -38,6 +39,11 @@ export default async function TurnPage({ params }: TurnPageProps) {
           eyebrow="Turn View"
           title={`Turn ${game.turnNumber} decision workspace`}
           description="A tighter operational view for reviewing public state, private intelligence, advisory guidance, and the current options list before submitting an action."
+          actions={
+            <Link className="button button--secondary" href={`/games/${game.id}`}>
+              Back to session overview
+            </Link>
+          }
         />
         <div className="turn-grid">
           <div className="section-stack">
