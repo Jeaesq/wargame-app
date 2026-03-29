@@ -147,9 +147,12 @@ export const advisorAnswerSchema = z.object({
   gameId: z.string().min(1),
   turnNumber: z.number().int().nonnegative(),
   perspectiveFactionId: z.string().min(1).nullable().default(null),
+  question: z.string().min(1).default(""),
   summary: z.string().min(1),
+  shortAnswer: z.string().min(1),
   rationale: z.array(z.string()).min(1),
   recommendationBand: recommendationBandSchema,
+  confidenceLabel: z.enum(["low", "medium", "high", "uncertain"]),
   recommendedOptionIds: z.array(z.string()).default([]),
   confidencePercent: z.number().min(0).max(100),
   riskNotes: z.array(z.string()).default([]),
@@ -195,6 +198,13 @@ export const resolvedActionSummarySchema = z.object({
   recommendationPercent: z.number().min(0).max(100).nullable().default(null)
 });
 
+export const resolvedActorSchema = z.object({
+  playerId: z.string().min(1),
+  playerName: z.string().min(1),
+  playerRole: playerRoleSchema,
+  factionId: z.string().min(1)
+});
+
 export const stateChangeSchema = z.object({
   key: z.string().min(1),
   label: z.string().min(1),
@@ -212,6 +222,7 @@ export const turnResolutionSchema = z.object({
   status: resolutionStatusSchema,
   appliedOptionId: z.string().min(1),
   actingFactionId: z.string().min(1),
+  actor: resolvedActorSchema,
   selectedAction: resolvedActionSummarySchema,
   publicSummary: z.string().min(1),
   privateSummaries: z
@@ -315,6 +326,12 @@ export const scenariosListResponseSchema = z.object({
   scenarios: z.array(scenarioDefinitionSchema)
 });
 
+export const advisorQuestionRequestSchema = z.object({
+  factionId: z.string().min(1).nullable().optional(),
+  playerId: z.string().min(1).optional(),
+  question: z.string().min(1)
+});
+
 export const createTurnRequestSchema = z.object({
   playerId: z.string().min(1),
   factionId: z.string().min(1),
@@ -326,7 +343,8 @@ export const createTurnRequestSchema = z.object({
 
 export const turnResolutionResponseSchema = z.object({
   game: gameSchema,
-  resolution: turnResolutionSchema
+  resolution: turnResolutionSchema,
+  followupResolutions: z.array(turnResolutionSchema).default([])
 });
 
 export const turnsListResponseSchema = z.object({
@@ -356,6 +374,7 @@ export type AdvisorAnswer = z.infer<typeof advisorAnswerSchema>;
 export type ScenarioDefinition = z.infer<typeof scenarioDefinitionSchema>;
 export type ChoiceOption = z.infer<typeof choiceOptionSchema>;
 export type ResolvedActionSummary = z.infer<typeof resolvedActionSummarySchema>;
+export type ResolvedActor = z.infer<typeof resolvedActorSchema>;
 export type StateChange = z.infer<typeof stateChangeSchema>;
 export type CreateGameRequest = z.infer<typeof createGameRequestSchema>;
 export type GamesListResponse = z.infer<typeof gamesListResponseSchema>;

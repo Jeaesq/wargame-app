@@ -1,4 +1,6 @@
 import {
+  advisorAnswerSchema,
+  advisorQuestionRequestSchema,
   createGameRequestSchema,
   createTurnRequestSchema,
   gameSchema,
@@ -11,7 +13,8 @@ import {
   type CreateTurnRequest,
   type Game,
   type ScenarioDefinition,
-  type TurnResolution
+  type TurnResolution,
+  type AdvisorAnswer
 } from "@wargame/shared";
 
 const apiBaseUrl = process.env.API_BASE_URL ?? "http://localhost:4000";
@@ -86,7 +89,11 @@ export async function createGame(input: CreateGameRequest): Promise<Game> {
 export async function submitTurn(
   gameId: string,
   input: CreateTurnRequest
-): Promise<{ game: Game; resolution: TurnResolution }> {
+): Promise<{
+  game: Game;
+  resolution: TurnResolution;
+  followupResolutions: TurnResolution[];
+}> {
   const body = createTurnRequestSchema.parse(input);
 
   return apiRequest(
@@ -96,5 +103,25 @@ export async function submitTurn(
       body: JSON.stringify(body)
     },
     turnResolutionResponseSchema
+  );
+}
+
+export async function askAdvisor(
+  gameId: string,
+  input: {
+    question: string;
+    factionId?: string | null;
+    playerId?: string;
+  }
+): Promise<AdvisorAnswer> {
+  const body = advisorQuestionRequestSchema.parse(input);
+
+  return apiRequest(
+    `/games/${gameId}/advisor`,
+    {
+      method: "POST",
+      body: JSON.stringify(body)
+    },
+    advisorAnswerSchema
   );
 }

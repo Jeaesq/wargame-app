@@ -15,11 +15,12 @@ export class StaticTurnResolutionService implements TurnResolutionService {
     const actingPrivateState = game.state.privateByPlayer.find(
       (state) => state.playerId === action.playerId
     );
+    const actingPlayer = game.players.find((player) => player.id === action.playerId);
     const option = actingPrivateState?.availableOptions.find(
       (candidate) => candidate.id === action.optionId
     );
 
-    if (!option) {
+    if (!option || !actingPlayer) {
       throw new ValidationError(`Option ${action.optionId} is not legal for this turn.`);
     }
 
@@ -49,6 +50,12 @@ export class StaticTurnResolutionService implements TurnResolutionService {
       status: "resolved",
       appliedOptionId: option.id,
       actingFactionId: action.factionId,
+      actor: {
+        playerId: actingPlayer.id,
+        playerName: actingPlayer.name,
+        playerRole: actingPlayer.role,
+        factionId: action.factionId
+      },
       selectedAction: {
         optionId: option.id,
         title: option.title,

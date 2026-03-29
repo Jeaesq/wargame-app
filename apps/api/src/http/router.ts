@@ -11,6 +11,7 @@ type RouteMatch = {
 
 export type ApiServices = {
   advisorService: import("../services/types.js").AdvisorService;
+  botStrategyService: import("../services/types.js").BotStrategyService;
   gameRepository: import("../services/types.js").GameRepository;
   scenarioRepository: import("../services/types.js").ScenarioRepository;
   turnResolutionService: import("../services/types.js").TurnResolutionService;

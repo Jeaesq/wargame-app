@@ -63,7 +63,12 @@ export default async function GameDetailPage({ params }: GameDetailPageProps) {
           </div>
           <div className="section-stack">
             <PrivateIntelligencePanel privateState={privateState} />
-            <AdvisorChatPanel answer={advisorAnswer} />
+            <AdvisorChatPanel
+              answer={advisorAnswer}
+              factionId={currentHumanPlayer?.factionId ?? null}
+              gameId={game.id}
+              playerId={currentHumanPlayer?.id}
+            />
           </div>
         </div>
       </div>

@@ -23,6 +23,12 @@ export function TurnHistory({ turns }: TurnHistoryProps) {
               <span className="pill">{turn.status}</span>
             </div>
             <div className="inline-meta">
+              <span className={`pill ${turn.actor.playerRole === "ai" ? "pill--risk" : ""}`}>
+                {turn.actor.playerRole === "ai" ? "Bot Move" : "Player Move"}
+              </span>
+              <span className="pill">
+                {turn.actor.playerName} · {turn.actor.factionId}
+              </span>
               <span className="pill">
                 Action: {turn.selectedAction.title}
               </span>

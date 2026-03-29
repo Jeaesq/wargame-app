@@ -84,17 +84,79 @@ export function registerTurnRoutes(router: Router): void {
         action
       });
 
+      const followupResolutions = [];
+      let currentGame = result.updatedGame;
+
+      if (currentGame.mode === "solo" && currentGame.currentFactionId) {
+        const botPlayer = currentGame.players.find(
+          (player) =>
+            player.role === "ai" && player.factionId === currentGame.currentFactionId
+        );
+
+        if (botPlayer?.factionId) {
+          const botDecision = await services.botStrategyService.chooseAction({
+            game: currentGame,
+            scenario,
+            factionId: botPlayer.factionId
+          });
+
+          if (botDecision) {
+            const botPrivateState = currentGame.state.privateByPlayer.find(
+              (state) => state.playerId === botPlayer.id
+            );
+            const botOption = botPrivateState?.availableOptions.find(
+              (candidate) => candidate.id === botDecision.optionId
+            );
+
+            if (botOption) {
+              const botAction = turnActionSchema.parse({
+                id: randomUUID(),
+                gameId: currentGame.id,
+                turnNumber: currentGame.turnNumber,
+                playerId: botPlayer.id,
+                factionId: botPlayer.factionId,
+                optionId: botOption.id,
+                kind: botOption.kind,
+                submittedAt: services.now(),
+                declaredIntent: botDecision.rationale,
+                parameters: {},
+                clientContext: {
+                  source: "static-bot"
+                }
+              });
+
+              const botResult = await services.turnResolutionService.resolveTurn({
+                game: currentGame,
+                scenario,
+                action: botAction
+              });
+
+              currentGame = botResult.updatedGame;
+              followupResolutions.push(turnResolutionSchema.parse(botResult.resolution));
+            }
+          }
+        }
+      }
+
       await services.gameRepository.appendTurnResolution(
-        result.updatedGame,
+        currentGame,
         result.resolution
       );
+
+      for (const followupResolution of followupResolutions) {
+        await services.gameRepository.appendTurnResolution(
+          currentGame,
+          followupResolution
+        );
+      }
 
       sendJson(
         response,
         201,
         turnResolutionResponseSchema.parse({
-          game: gameSchema.parse(result.updatedGame),
-          resolution: turnResolutionSchema.parse(result.resolution)
+          game: gameSchema.parse(currentGame),
+          resolution: turnResolutionSchema.parse(result.resolution),
+          followupResolutions
         })
       );
     }

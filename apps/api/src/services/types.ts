@@ -34,10 +34,27 @@ export interface TurnResolutionService {
   resolveTurn(input: ResolveTurnInput): Promise<ResolveTurnResult>;
 }
 
+export type BotMoveInput = {
+  game: Game;
+  scenario: ScenarioDefinition;
+  factionId: string;
+};
+
+export type BotMoveDecision = {
+  optionId: string;
+  rationale: string;
+};
+
+export interface BotStrategyService {
+  chooseAction(input: BotMoveInput): Promise<BotMoveDecision | null>;
+}
+
 export type GenerateAdvisorAnswerInput = {
   game: Game;
   scenario: ScenarioDefinition;
   factionId: string | null;
+  playerId?: string;
+  question: string;
 };
 
 export interface AdvisorService {

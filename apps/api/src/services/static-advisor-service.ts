@@ -6,11 +6,16 @@ export class StaticAdvisorService implements AdvisorService {
   constructor(private readonly now: () => string) {}
 
   async generateAdvisorAnswer(input: GenerateAdvisorAnswerInput) {
+    const normalizedQuestion = input.question.trim().toLowerCase();
     const visibleOptions = input.factionId
       ? (
-          input.game.state.privateByPlayer.find(
-            (state) => state.factionId === input.factionId
-          )?.availableOptions ?? []
+          input.game.state.privateByPlayer.find((state) => {
+            if (input.playerId) {
+              return state.playerId === input.playerId;
+            }
+
+            return state.factionId === input.factionId;
+          })?.availableOptions ?? []
         )
       : [];
 
@@ -20,31 +25,94 @@ export class StaticAdvisorService implements AdvisorService {
     );
 
     const topOption = rankedOptions[0];
+    const publicState = input.game.state.public;
+    const asksAboutRisk =
+      normalizedQuestion.includes("risk") ||
+      normalizedQuestion.includes("danger") ||
+      normalizedQuestion.includes("escalat");
+    const asksAboutOptions =
+      normalizedQuestion.includes("option") ||
+      normalizedQuestion.includes("move") ||
+      normalizedQuestion.includes("should");
+    const asksAboutTension =
+      normalizedQuestion.includes("tension") ||
+      normalizedQuestion.includes("situation") ||
+      normalizedQuestion.includes("state");
+
+    let shortAnswer = "The visible situation remains manageable but tense.";
+    let rationale = [
+      `Public world tension is currently ${publicState.worldTension}%.`,
+      `There are ${visibleOptions.length} visible option(s) available from this perspective.`
+    ];
+    let confidenceLabel: "low" | "medium" | "high" | "uncertain" = "medium";
+    let summary =
+      "Visible state suggests caution: the crisis is active, but there is still room to shape the next move.";
+
+    if (asksAboutRisk) {
+      shortAnswer =
+        publicState.worldTension >= 60
+          ? "Visible escalation risk is elevated."
+          : "Visible escalation risk is present but not yet extreme.";
+      summary = shortAnswer;
+      rationale = [
+        `World tension is ${publicState.worldTension}% based on public state.`,
+        "Recent public conditions indicate the next move will be interpreted as a signal of intent.",
+        "This answer excludes hidden intelligence and uses only player-visible information."
+      ];
+      confidenceLabel = publicState.worldTension >= 60 ? "high" : "medium";
+    } else if (asksAboutOptions && topOption) {
+      shortAnswer = `The strongest visible option is ${topOption.title.toLowerCase()}.`;
+      summary = `Based on visible state, ${topOption.title.toLowerCase()} is the clearest recommendation.`;
+      rationale = [
+        `${topOption.title} carries the highest visible advisory score at ${topOption.recommendationPercent ?? 0}%.`,
+        `Public tension is ${publicState.worldTension}%, so visible signaling still matters.`,
+        "This answer is limited to currently visible options and public state."
+      ];
+      confidenceLabel = (topOption.recommendationPercent ?? 0) >= 65 ? "high" : "medium";
+    } else if (asksAboutTension) {
+      shortAnswer = `The public situation is defined by ${publicState.headline?.toLowerCase() ?? "an active crisis"}.`;
+      summary =
+        "The crisis remains unresolved, and the visible state suggests that pressure and signaling are the main drivers right now.";
+      rationale = [
+        publicState.publicNarrative,
+        `World tension is ${publicState.worldTension}% in the public state.`,
+        "This answer is grounded only in public information and visible options."
+      ];
+      confidenceLabel = "medium";
+    } else if (topOption) {
+      shortAnswer = `A cautious recommendation is to consider ${topOption.title.toLowerCase()}.`;
+      summary = shortAnswer;
+      rationale = [
+        `${topOption.title} is currently the highest-ranked visible option.`,
+        `Visible tension is ${publicState.worldTension}%.`,
+        "No hidden state was used to produce this answer."
+      ];
+    }
 
     return advisorAnswerSchema.parse({
       answerId: randomUUID(),
       gameId: input.game.id,
       turnNumber: input.game.turnNumber,
       perspectiveFactionId: input.factionId,
-      summary: topOption
-        ? `Priority should stay on ${topOption.title.toLowerCase()}.`
-        : "No clear advisory option is available for the current faction.",
-      rationale: topOption
-        ? [
-            "Current visible options favor low-complexity guidance over aggressive branching.",
-            "The advisor is using placeholder heuristics until the richer simulation model is implemented."
-          ]
-        : ["No legal options were found for the requested perspective."],
-      recommendationBand: topOption ? "medium" : "uncertain",
+      question: input.question,
+      summary,
+      shortAnswer,
+      rationale:
+        topOption || asksAboutRisk || asksAboutTension
+          ? rationale
+          : ["No visible option or public-state signal was strong enough to support a clearer answer."],
+      recommendationBand:
+        topOption && asksAboutOptions ? "medium" : asksAboutRisk ? "uncertain" : "medium",
+      confidenceLabel,
       recommendedOptionIds: topOption ? [topOption.id] : [],
       confidencePercent: topOption?.recommendationPercent ?? 25,
       riskNotes: [
         "Recommendation percentages are advisory and not deterministic.",
-        "This service is intentionally lightweight and can later be upgraded with richer analysis."
+        "This mock advisor answers from visible public state and visible options only."
       ],
       assumptions: [
         `Scenario context: ${input.scenario.title}`,
-        "No external LLM call has been made in this placeholder implementation."
+        "No hidden intelligence or external LLM call has been used in this placeholder implementation."
       ],
       metadata: {
         provider: "static-advisor",

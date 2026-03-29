@@ -7,12 +7,14 @@ import { getScenarioDefinitions } from "./scenarios/index.js";
 import { InMemoryGameRepository } from "./services/in-memory-game-repository.js";
 import { InMemoryScenarioRepository } from "./services/in-memory-scenario-repository.js";
 import { StaticAdvisorService } from "./services/static-advisor-service.js";
+import { StaticBotStrategyService } from "./services/static-bot-strategy-service.js";
 import { StaticTurnResolutionService } from "./services/static-turn-resolution-service.js";
 
 export function createApp() {
   const now = () => new Date().toISOString();
   const services: ApiServices = {
     advisorService: new StaticAdvisorService(now),
+    botStrategyService: new StaticBotStrategyService(),
     gameRepository: new InMemoryGameRepository(),
     scenarioRepository: new InMemoryScenarioRepository(getScenarioDefinitions()),
     turnResolutionService: new StaticTurnResolutionService(now),
