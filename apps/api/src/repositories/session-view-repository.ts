@@ -1,8 +1,10 @@
 import { gameSchema, type Game } from "@wargame/shared";
-import type { SessionViewRepository } from "../contracts.js";
-import type { GameSessionRepository } from "../contracts.js";
+import type {
+  GameSessionRepository,
+  SessionViewRepository
+} from "./contracts.js";
 
-export class InMemorySessionViewRepository implements SessionViewRepository {
+export class RepositoryBackedSessionViewRepository implements SessionViewRepository {
   constructor(private readonly gameSessionRepository: GameSessionRepository) {}
 
   async getSessionForPlayerView(input: {

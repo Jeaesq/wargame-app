@@ -1,14 +1,19 @@
-import type { AdvisorContextRepository } from "../contracts.js";
-import type { GameSessionRepository } from "../contracts.js";
+import type {
+  AdvisorContextRepository,
+  AdvisorVisibleContext,
+  GameSessionRepository
+} from "./contracts.js";
 
-export class InMemoryAdvisorContextRepository implements AdvisorContextRepository {
+export class RepositoryBackedAdvisorContextRepository
+  implements AdvisorContextRepository
+{
   constructor(private readonly gameSessionRepository: GameSessionRepository) {}
 
   async getAdvisorContext(input: {
     sessionId: string;
     playerId?: string;
     factionId?: string | null;
-  }) {
+  }): Promise<AdvisorVisibleContext | null> {
     const session = await this.gameSessionRepository.getSessionById(input.sessionId);
 
     if (!session) {

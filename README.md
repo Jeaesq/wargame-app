@@ -1,11 +1,11 @@
 # Wargame App
 
-Minimal TypeScript monorepo scaffold for a turn-based geopolitical wargame.
+TypeScript monorepo for a turn-based geopolitical wargame prototype with a Next.js frontend, a Node.js backend, shared Zod contracts, and optional PostgreSQL persistence.
 
 ## Structure
 
 - `apps/web` - Next.js frontend shell
-- `apps/api` - Node.js TypeScript backend shell
+- `apps/api` - Node.js TypeScript backend
 - `packages/shared` - shared types and Zod schemas
 - `docs` - product and architecture notes
 
@@ -20,7 +20,9 @@ Minimal TypeScript monorepo scaffold for a turn-based geopolitical wargame.
 npm install
 ```
 
-## Run the apps
+## Run in memory mode
+
+This is the default mode and requires no database:
 
 Start both apps together:
 
@@ -51,6 +53,46 @@ Example:
 API_BASE_URL=http://localhost:4000 npm run dev:web
 ```
 
+## Run with PostgreSQL
+
+The backend supports `PERSISTENCE_MODE=postgres` for database-backed session and turn persistence.
+
+### 1. Start PostgreSQL locally
+
+Use Docker Compose from the repository root:
+
+```bash
+docker compose up -d postgres
+```
+
+This starts PostgreSQL on `localhost:5432` with:
+
+- database: `wargame`
+- user: `wargame`
+- password: `wargame`
+
+### 2. Run the database migration
+
+```bash
+PERSISTENCE_MODE=postgres DATABASE_URL=postgres://wargame:wargame@localhost:5432/wargame npm run db:migrate -w @wargame/api
+```
+
+### 3. Start the app against PostgreSQL
+
+Start both apps:
+
+```bash
+PERSISTENCE_MODE=postgres DATABASE_URL=postgres://wargame:wargame@localhost:5432/wargame npm run dev
+```
+
+Or start just the API:
+
+```bash
+PERSISTENCE_MODE=postgres DATABASE_URL=postgres://wargame:wargame@localhost:5432/wargame npm run dev:api
+```
+
+If `PERSISTENCE_MODE=postgres` is selected without `DATABASE_URL`, the API exits immediately with a clear configuration error.
+
 ## Other commands
 
 ```bash
@@ -62,5 +104,6 @@ npm run typecheck
 
 - The repository is set up as a workspace monorepo using npm workspaces.
 - `@wargame/shared` is the place for cross-app contracts and schema validation.
-- The frontend and backend are intentionally minimal.
-- No game logic, persistence, or LLM orchestration has been implemented yet.
+- The backend supports both in-memory and PostgreSQL-backed persistence.
+- Scenario definitions are still code-defined; the database currently stores canonical game sessions and turn history.
+- The PostgreSQL schema is managed through SQL migrations in [apps/api/src/db/migrations/001_init.sql](/Users/joshanderson/Documents/Creative/Codex%20-%20ChatGPT%20Codex/wargame-app/apps/api/src/db/migrations/001_init.sql).
