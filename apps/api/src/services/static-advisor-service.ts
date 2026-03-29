@@ -7,25 +7,13 @@ export class StaticAdvisorService implements AdvisorService {
 
   async generateAdvisorAnswer(input: GenerateAdvisorAnswerInput) {
     const normalizedQuestion = input.question.trim().toLowerCase();
-    const visibleOptions = input.factionId
-      ? (
-          input.game.state.privateByPlayer.find((state) => {
-            if (input.playerId) {
-              return state.playerId === input.playerId;
-            }
-
-            return state.factionId === input.factionId;
-          })?.availableOptions ?? []
-        )
-      : [];
-
-    const rankedOptions = [...visibleOptions].sort(
+    const { context } = input;
+    const rankedOptions = [...context.visibleOptions].sort(
       (left, right) =>
         (right.recommendationPercent ?? 0) - (left.recommendationPercent ?? 0)
     );
-
     const topOption = rankedOptions[0];
-    const publicState = input.game.state.public;
+    const publicState = context.publicState;
     const asksAboutRisk =
       normalizedQuestion.includes("risk") ||
       normalizedQuestion.includes("danger") ||
@@ -42,7 +30,7 @@ export class StaticAdvisorService implements AdvisorService {
     let shortAnswer = "The visible situation remains manageable but tense.";
     let rationale = [
       `Public world tension is currently ${publicState.worldTension}%.`,
-      `There are ${visibleOptions.length} visible option(s) available from this perspective.`
+      `There are ${context.visibleOptions.length} visible option(s) available from this perspective.`
     ];
     let confidenceLabel: "low" | "medium" | "high" | "uncertain" = "medium";
     let summary =
@@ -59,6 +47,11 @@ export class StaticAdvisorService implements AdvisorService {
         "Recent public conditions indicate the next move will be interpreted as a signal of intent.",
         "This answer excludes hidden intelligence and uses only player-visible information."
       ];
+
+      if (context.visibleWarnings.length > 0) {
+        rationale.push(`Visible warning: ${context.visibleWarnings[0]}`);
+      }
+
       confidenceLabel = publicState.worldTension >= 60 ? "high" : "medium";
     } else if (asksAboutOptions && topOption) {
       shortAnswer = `The strongest visible option is ${topOption.title.toLowerCase()}.`;
@@ -91,9 +84,9 @@ export class StaticAdvisorService implements AdvisorService {
 
     return advisorAnswerSchema.parse({
       answerId: randomUUID(),
-      gameId: input.game.id,
-      turnNumber: input.game.turnNumber,
-      perspectiveFactionId: input.factionId,
+      gameId: context.gameId,
+      turnNumber: context.turnNumber,
+      perspectiveFactionId: context.factionId,
       question: input.question,
       summary,
       shortAnswer,

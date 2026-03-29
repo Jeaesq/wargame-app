@@ -10,12 +10,10 @@ type RouteMatch = {
 };
 
 export type ApiServices = {
-  advisorService: import("../services/types.js").AdvisorService;
-  botStrategyService: import("../services/types.js").BotStrategyService;
-  gameRepository: import("../services/types.js").GameRepository;
-  scenarioRepository: import("../services/types.js").ScenarioRepository;
-  turnResolutionService: import("../services/types.js").TurnResolutionService;
-  now: () => string;
+  advisorQaService: import("../services/advisor-qa-service.js").AdvisorQaService;
+  gameSessionService: import("../services/game-session-service.js").GameSessionService;
+  scenarioRepository: import("../repositories/contracts.js").ScenarioRepository;
+  turnSubmissionService: import("../services/turn-submission-service.js").TurnSubmissionService;
 };
 
 export type RouteContext = {

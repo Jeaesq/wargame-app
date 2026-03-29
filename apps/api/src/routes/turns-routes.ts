@@ -1,25 +1,21 @@
 import {
   createTurnRequestSchema,
   gameSchema,
-  turnActionSchema,
   turnResolutionResponseSchema,
   turnsListResponseSchema,
   turnResolutionSchema
 } from "@wargame/shared";
-import { NotFoundError, ValidationError } from "../errors/app-error.js";
 import type { Router } from "../http/router.js";
 import { readJsonBody } from "../http/request.js";
 import { sendJson } from "../http/response.js";
 import { validateWithSchema } from "../http/validation.js";
-import { randomUUID } from "node:crypto";
 
 export function registerTurnRoutes(router: Router): void {
   router.register(
     "GET",
     "/games/:gameId/turns",
     async ({ params, response, services }) => {
-      const turns = await services.gameRepository.listTurnResolutions(params.gameId);
-
+      const turns = await services.turnSubmissionService.listTurns(params.gameId);
       sendJson(
         response,
         200,
@@ -41,122 +37,20 @@ export function registerTurnRoutes(router: Router): void {
         "Turn submission payload is invalid."
       );
 
-      const game = await services.gameRepository.getGameById(params.gameId);
-
-      if (!game) {
-        throw new NotFoundError(`Game ${params.gameId} was not found.`);
-      }
-
-      const scenario = await services.scenarioRepository.getScenarioById(game.scenarioId);
-
-      if (!scenario) {
-        throw new NotFoundError(`Scenario ${game.scenarioId} was not found.`);
-      }
-
-      const privateState = game.state.privateByPlayer.find(
-        (state) => state.playerId === input.playerId
+      const result = await services.turnSubmissionService.submitTurn(
+        params.gameId,
+        input
       );
-      const option = privateState?.availableOptions.find(
-        (candidate) => candidate.id === input.optionId
-      );
-
-      if (!option) {
-        throw new ValidationError(`Option ${input.optionId} is not available this turn.`);
-      }
-
-      const action = turnActionSchema.parse({
-        id: randomUUID(),
-        gameId: game.id,
-        turnNumber: game.turnNumber,
-        playerId: input.playerId,
-        factionId: input.factionId,
-        optionId: input.optionId,
-        kind: option.kind,
-        submittedAt: services.now(),
-        declaredIntent: input.declaredIntent,
-        parameters: input.parameters,
-        clientContext: input.clientContext
-      });
-
-      const result = await services.turnResolutionService.resolveTurn({
-        game,
-        scenario,
-        action
-      });
-
-      const followupResolutions = [];
-      let currentGame = result.updatedGame;
-
-      if (currentGame.mode === "solo" && currentGame.currentFactionId) {
-        const botPlayer = currentGame.players.find(
-          (player) =>
-            player.role === "ai" && player.factionId === currentGame.currentFactionId
-        );
-
-        if (botPlayer?.factionId) {
-          const botDecision = await services.botStrategyService.chooseAction({
-            game: currentGame,
-            scenario,
-            factionId: botPlayer.factionId
-          });
-
-          if (botDecision) {
-            const botPrivateState = currentGame.state.privateByPlayer.find(
-              (state) => state.playerId === botPlayer.id
-            );
-            const botOption = botPrivateState?.availableOptions.find(
-              (candidate) => candidate.id === botDecision.optionId
-            );
-
-            if (botOption) {
-              const botAction = turnActionSchema.parse({
-                id: randomUUID(),
-                gameId: currentGame.id,
-                turnNumber: currentGame.turnNumber,
-                playerId: botPlayer.id,
-                factionId: botPlayer.factionId,
-                optionId: botOption.id,
-                kind: botOption.kind,
-                submittedAt: services.now(),
-                declaredIntent: botDecision.rationale,
-                parameters: {},
-                clientContext: {
-                  source: "static-bot"
-                }
-              });
-
-              const botResult = await services.turnResolutionService.resolveTurn({
-                game: currentGame,
-                scenario,
-                action: botAction
-              });
-
-              currentGame = botResult.updatedGame;
-              followupResolutions.push(turnResolutionSchema.parse(botResult.resolution));
-            }
-          }
-        }
-      }
-
-      await services.gameRepository.appendTurnResolution(
-        currentGame,
-        result.resolution
-      );
-
-      for (const followupResolution of followupResolutions) {
-        await services.gameRepository.appendTurnResolution(
-          currentGame,
-          followupResolution
-        );
-      }
 
       sendJson(
         response,
         201,
         turnResolutionResponseSchema.parse({
-          game: gameSchema.parse(currentGame),
+          game: gameSchema.parse(result.game),
           resolution: turnResolutionSchema.parse(result.resolution),
-          followupResolutions
+          followupResolutions: result.followupResolutions.map((resolution) =>
+            turnResolutionSchema.parse(resolution)
+          )
         })
       );
     }

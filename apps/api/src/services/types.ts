@@ -5,19 +5,7 @@ import type {
   TurnAction,
   TurnResolution
 } from "@wargame/shared";
-
-export interface GameRepository {
-  listGames(): Promise<Game[]>;
-  getGameById(gameId: string): Promise<Game | null>;
-  saveGame(game: Game): Promise<void>;
-  listTurnResolutions(gameId: string): Promise<TurnResolution[]>;
-  appendTurnResolution(game: Game, resolution: TurnResolution): Promise<void>;
-}
-
-export interface ScenarioRepository {
-  listScenarios(): Promise<ScenarioDefinition[]>;
-  getScenarioById(scenarioId: string): Promise<ScenarioDefinition | null>;
-}
+import type { AdvisorVisibleContext } from "../repositories/contracts.js";
 
 export type ResolveTurnInput = {
   game: Game;
@@ -50,11 +38,9 @@ export interface BotStrategyService {
 }
 
 export type GenerateAdvisorAnswerInput = {
-  game: Game;
   scenario: ScenarioDefinition;
-  factionId: string | null;
-  playerId?: string;
   question: string;
+  context: AdvisorVisibleContext;
 };
 
 export interface AdvisorService {
