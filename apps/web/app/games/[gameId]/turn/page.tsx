@@ -4,11 +4,10 @@ import { OptionsList } from "../../../../components/options-list";
 import { PageHeader } from "../../../../components/page-header";
 import { PrivateIntelligencePanel } from "../../../../components/private-intelligence-panel";
 import { PublicStatePanel } from "../../../../components/public-state-panel";
-import {
-  getMockAdvisorAnswer,
-  getMockGameById,
-  getPrivateStateForPlayer
-} from "../../../../lib/mock-data";
+import { TurnActionForm } from "../../../../components/turn-action-form";
+import { getGame } from "../../../../lib/api";
+
+export const dynamic = "force-dynamic";
 
 type TurnPageProps = {
   params: Promise<{
@@ -18,14 +17,19 @@ type TurnPageProps = {
 
 export default async function TurnPage({ params }: TurnPageProps) {
   const { gameId } = await params;
-  const game = getMockGameById(gameId);
+  const game = await getGame(gameId).catch(() => null);
 
   if (!game) {
     notFound();
   }
 
-  const privateState = getPrivateStateForPlayer(gameId);
-  const advisorAnswer = getMockAdvisorAnswer(gameId);
+  const currentHumanPlayer =
+    game.players.find((player) => player.role === "human" && player.factionId === game.currentFactionId) ??
+    game.players.find((player) => player.role === "human");
+  const privateState = game.privatePlayerStates.find(
+    (state) => state.playerId === currentHumanPlayer?.id
+  ) ?? null;
+  const advisorAnswer = game.advisorAnswers.at(-1) ?? null;
 
   return (
     <main className="page">
@@ -37,6 +41,7 @@ export default async function TurnPage({ params }: TurnPageProps) {
         />
         <div className="turn-grid">
           <div className="section-stack">
+            <TurnActionForm game={game} />
             <OptionsList options={game.availableOptions} />
             <PublicStatePanel game={game} />
           </div>

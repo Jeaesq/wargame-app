@@ -273,6 +273,46 @@ export const gameSchema = z.object({
   metadata: metadataSchema
 });
 
+export const createGameRequestSchema = z.object({
+  scenarioId: z.string().min(1),
+  mode: gameModeSchema,
+  players: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        role: playerRoleSchema.default("human"),
+        factionId: z.string().min(1).optional()
+      })
+    )
+    .min(1)
+});
+
+export const gamesListResponseSchema = z.object({
+  games: z.array(gameSchema)
+});
+
+export const scenariosListResponseSchema = z.object({
+  scenarios: z.array(scenarioDefinitionSchema)
+});
+
+export const createTurnRequestSchema = z.object({
+  playerId: z.string().min(1),
+  factionId: z.string().min(1),
+  optionId: z.string().min(1),
+  declaredIntent: z.string().min(1).optional(),
+  parameters: z.record(z.string(), z.unknown()).default({}),
+  clientContext: z.record(z.string(), z.unknown()).default({})
+});
+
+export const turnResolutionResponseSchema = z.object({
+  game: gameSchema,
+  resolution: turnResolutionSchema
+});
+
+export const turnsListResponseSchema = z.object({
+  turns: z.array(turnResolutionSchema)
+});
+
 export type HealthStatus = z.infer<typeof healthStatusSchema>;
 export type GameMode = z.infer<typeof gameModeSchema>;
 export type GameStatus = z.infer<typeof gameStatusSchema>;
@@ -295,3 +335,9 @@ export type TurnResolution = z.infer<typeof turnResolutionSchema>;
 export type AdvisorAnswer = z.infer<typeof advisorAnswerSchema>;
 export type ScenarioDefinition = z.infer<typeof scenarioDefinitionSchema>;
 export type ChoiceOption = z.infer<typeof choiceOptionSchema>;
+export type CreateGameRequest = z.infer<typeof createGameRequestSchema>;
+export type GamesListResponse = z.infer<typeof gamesListResponseSchema>;
+export type ScenariosListResponse = z.infer<typeof scenariosListResponseSchema>;
+export type CreateTurnRequest = z.infer<typeof createTurnRequestSchema>;
+export type TurnResolutionResponse = z.infer<typeof turnResolutionResponseSchema>;
+export type TurnsListResponse = z.infer<typeof turnsListResponseSchema>;

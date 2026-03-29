@@ -6,13 +6,9 @@ import { PrivateIntelligencePanel } from "../../../components/private-intelligen
 import { PublicStatePanel } from "../../../components/public-state-panel";
 import { ScenarioBriefing } from "../../../components/scenario-briefing";
 import { TurnHistory } from "../../../components/turn-history";
-import {
-  getMockAdvisorAnswer,
-  getMockGameById,
-  getMockTurnHistory,
-  getPrivateStateForPlayer,
-  mockScenario
-} from "../../../lib/mock-data";
+import { getGame, getScenarios, getTurnHistory } from "../../../lib/api";
+
+export const dynamic = "force-dynamic";
 
 type GameDetailPageProps = {
   params: Promise<{
@@ -22,22 +18,28 @@ type GameDetailPageProps = {
 
 export default async function GameDetailPage({ params }: GameDetailPageProps) {
   const { gameId } = await params;
-  const game = getMockGameById(gameId);
+  const game = await getGame(gameId).catch(() => null);
 
   if (!game) {
     notFound();
   }
 
-  const privateState = getPrivateStateForPlayer(gameId);
-  const advisorAnswer = getMockAdvisorAnswer(gameId);
-  const turnHistory = getMockTurnHistory(gameId);
+  const [scenarios, turnHistory] = await Promise.all([getScenarios(), getTurnHistory(gameId)]);
+  const scenario = scenarios.find((item) => item.id === game.scenarioId);
+  const currentHumanPlayer =
+    game.players.find((player) => player.role === "human" && player.factionId === game.currentFactionId) ??
+    game.players.find((player) => player.role === "human");
+  const privateState = game.privatePlayerStates.find(
+    (state) => state.playerId === currentHumanPlayer?.id
+  ) ?? null;
+  const advisorAnswer = game.advisorAnswers.at(-1) ?? null;
 
   return (
     <main className="page">
       <div className="section-stack">
         <PageHeader
           eyebrow="Game Detail"
-          title={`${mockScenario.title} · Session overview`}
+          title={`${scenario?.title ?? "Scenario"} · Session overview`}
           description="This page acts like the player’s command dashboard: current scenario framing, state visibility, advisor guidance, and recent turn outcomes."
           actions={
             <Link className="button" href={`/games/${gameId}/turn`}>
@@ -47,7 +49,7 @@ export default async function GameDetailPage({ params }: GameDetailPageProps) {
         />
         <div className="dashboard-grid">
           <div className="section-stack">
-            <ScenarioBriefing game={game} scenario={mockScenario} />
+            {scenario ? <ScenarioBriefing game={game} scenario={scenario} /> : null}
             <PublicStatePanel game={game} />
             <TurnHistory turns={turnHistory} />
           </div>

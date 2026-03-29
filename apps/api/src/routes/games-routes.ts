@@ -1,9 +1,9 @@
 import {
-  gameModeSchema,
+  createGameRequestSchema,
   gameSchema,
-  playerRoleSchema
+  gamesListResponseSchema,
+  scenariosListResponseSchema
 } from "@wargame/shared";
-import { z } from "zod";
 import { NotFoundError } from "../errors/app-error.js";
 import type { Router } from "../http/router.js";
 import { readJsonBody } from "../http/request.js";
@@ -11,26 +11,29 @@ import { sendJson } from "../http/response.js";
 import { validateWithSchema } from "../http/validation.js";
 import { buildGameFromScenario } from "../services/game-factory.js";
 
-const createGameRequestSchema = z.object({
-  scenarioId: z.string().min(1),
-  mode: gameModeSchema,
-  players: z
-    .array(
-      z.object({
-        name: z.string().min(1),
-        role: playerRoleSchema.default("human"),
-        factionId: z.string().min(1).optional()
-      })
-    )
-    .min(1)
-});
-
 export function registerGameRoutes(router: Router): void {
+  router.register("GET", "/scenarios", async ({ response, services }) => {
+    const scenarios = await services.scenarioRepository.listScenarios();
+
+    sendJson(
+      response,
+      200,
+      scenariosListResponseSchema.parse({
+        scenarios
+      })
+    );
+  });
+
   router.register("GET", "/games", async ({ response, services }) => {
     const games = await services.gameRepository.listGames();
-    sendJson(response, 200, {
-      games: games.map((game) => gameSchema.parse(game))
-    });
+
+    sendJson(
+      response,
+      200,
+      gamesListResponseSchema.parse({
+        games: games.map((game) => gameSchema.parse(game))
+      })
+    );
   });
 
   router.register("GET", "/games/:gameId", async ({ params, response, services }) => {

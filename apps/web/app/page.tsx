@@ -1,9 +1,15 @@
 import Link from "next/link";
 import { appManifest } from "@wargame/shared";
 import { PageHeader } from "../components/page-header";
-import { mockGame, mockScenario } from "../lib/mock-data";
+import { getGames, getScenarios } from "../lib/api";
 
-export default function HomePage() {
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const [scenarios, games] = await Promise.all([getScenarios(), getGames()]);
+  const leadScenario = scenarios[0];
+  const latestGame = games[games.length - 1];
+
   return (
     <main className="page page--centered">
       <div className="section-stack">
@@ -16,30 +22,36 @@ export default function HomePage() {
               <Link className="button" href="/games/new">
                 Start a new game
               </Link>
-              <Link className="button button--secondary" href={`/games/${mockGame.id}`}>
-                Open mock session
-              </Link>
+              {latestGame ? (
+                <Link className="button button--secondary" href={`/games/${latestGame.id}`}>
+                  Open latest session
+                </Link>
+              ) : null}
             </>
           }
         />
         <section className="stats-grid">
           <article className="panel">
             <p className="eyebrow">Scenario Track</p>
-            <h2>{mockScenario.title}</h2>
-            <p className="muted">{mockScenario.description}</p>
+            <h2>{leadScenario?.title ?? "No scenarios loaded"}</h2>
+            <p className="muted">
+              {leadScenario?.description ?? "Start the API to load scenario data."}
+            </p>
           </article>
           <article className="panel">
-            <p className="eyebrow">Current Turn</p>
-            <h2>Turn {mockGame.turnNumber}</h2>
+            <p className="eyebrow">Active Sessions</p>
+            <h2>{games.length}</h2>
             <p className="muted">
-              Active faction: {mockGame.currentFactionId ?? "Unassigned"}
+              {latestGame
+                ? `Most recent game is on turn ${latestGame.turnNumber}.`
+                : "No in-memory games created yet."}
             </p>
           </article>
           <article className="panel">
             <p className="eyebrow">Interface Goal</p>
             <h2>Clear, playable, bounded</h2>
             <p className="muted">
-              This initial frontend uses shared-type mock data and placeholder panels only.
+              The frontend now reads and mutates game state through the backend API.
             </p>
           </article>
         </section>

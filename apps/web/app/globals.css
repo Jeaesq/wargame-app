@@ -155,6 +155,12 @@ textarea {
   font-weight: 600;
 }
 
+.button:disabled,
+.option-button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
 .button--secondary {
   background: transparent;
   color: inherit;
@@ -246,6 +252,12 @@ textarea {
   gap: 0.55rem;
 }
 
+.option-button {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
 .option-card__meta,
 .inline-meta {
   display: flex;
@@ -293,6 +305,12 @@ textarea {
   border: 1px solid var(--border-strong);
   background: rgba(255, 255, 255, 0.65);
   padding: 0.75rem;
+}
+
+.form-error {
+  margin: 0;
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .section-stack {

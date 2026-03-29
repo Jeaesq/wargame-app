@@ -1,24 +1,17 @@
 import {
-  actionKindSchema,
+  createTurnRequestSchema,
   gameSchema,
   turnActionSchema,
+  turnResolutionResponseSchema,
+  turnsListResponseSchema,
   turnResolutionSchema
 } from "@wargame/shared";
-import { z } from "zod";
 import { NotFoundError, ValidationError } from "../errors/app-error.js";
 import type { Router } from "../http/router.js";
 import { readJsonBody } from "../http/request.js";
 import { sendJson } from "../http/response.js";
 import { validateWithSchema } from "../http/validation.js";
-
-const createTurnRequestSchema = z.object({
-  playerId: z.string().min(1),
-  factionId: z.string().min(1),
-  optionId: z.string().min(1),
-  declaredIntent: z.string().min(1).optional(),
-  parameters: z.record(z.string(), z.unknown()).default({}),
-  clientContext: z.record(z.string(), z.unknown()).default({})
-});
+import { randomUUID } from "node:crypto";
 
 export function registerTurnRoutes(router: Router): void {
   router.register(
@@ -27,9 +20,13 @@ export function registerTurnRoutes(router: Router): void {
     async ({ params, response, services }) => {
       const turns = await services.gameRepository.listTurnResolutions(params.gameId);
 
-      sendJson(response, 200, {
-        turns: turns.map((turn) => turnResolutionSchema.parse(turn))
-      });
+      sendJson(
+        response,
+        200,
+        turnsListResponseSchema.parse({
+          turns: turns.map((turn) => turnResolutionSchema.parse(turn))
+        })
+      );
     }
   );
 
@@ -63,13 +60,13 @@ export function registerTurnRoutes(router: Router): void {
       }
 
       const action = turnActionSchema.parse({
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         gameId: game.id,
         turnNumber: game.turnNumber,
         playerId: input.playerId,
         factionId: input.factionId,
         optionId: input.optionId,
-        kind: actionKindSchema.parse(option.kind),
+        kind: option.kind,
         submittedAt: services.now(),
         declaredIntent: input.declaredIntent,
         parameters: input.parameters,
@@ -87,10 +84,14 @@ export function registerTurnRoutes(router: Router): void {
         result.resolution
       );
 
-      sendJson(response, 201, {
-        game: gameSchema.parse(result.updatedGame),
-        resolution: turnResolutionSchema.parse(result.resolution)
-      });
+      sendJson(
+        response,
+        201,
+        turnResolutionResponseSchema.parse({
+          game: gameSchema.parse(result.updatedGame),
+          resolution: turnResolutionSchema.parse(result.resolution)
+        })
+      );
     }
   );
 }
