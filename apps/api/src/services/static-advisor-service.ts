@@ -7,11 +7,12 @@ export class StaticAdvisorService implements AdvisorService {
 
   async generateAdvisorAnswer(input: GenerateAdvisorAnswerInput) {
     const visibleOptions = input.factionId
-      ? input.game.availableOptions.filter(
-          (option) =>
-            option.factionId === input.factionId || option.factionId === null
+      ? (
+          input.game.state.privateByPlayer.find(
+            (state) => state.factionId === input.factionId
+          )?.availableOptions ?? []
         )
-      : input.game.availableOptions;
+      : [];
 
     const rankedOptions = [...visibleOptions].sort(
       (left, right) =>

@@ -14,8 +14,8 @@ export function ScenarioBriefing({ game, scenario }: ScenarioBriefingProps) {
           Turn {game.turnNumber} · {game.phase.replaceAll("_", " ")}
         </span>
       </div>
-      <p className="highlight">{game.publicState.headline}</p>
-      <p>{game.publicState.publicNarrative}</p>
+      <p className="highlight">{game.state.public.headline}</p>
+      <p>{game.state.public.publicNarrative}</p>
       <div className="inline-meta">
         <span className="pill">{scenario.title}</span>
         <span className="pill">{scenario.historicalFrame}</span>

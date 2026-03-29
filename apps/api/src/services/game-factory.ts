@@ -83,7 +83,7 @@ export function buildGameFromScenario(input: BuildGameFromScenarioInput): Game {
 
   const gameId = randomUUID();
   const currentFactionId = players.find((player) => player.factionId)?.factionId ?? null;
-  const availableOptions = scenario.choiceCatalog.filter(
+  const availableOptions = scenario.openingState.initialOptions.filter(
     (option) => option.factionId === currentFactionId
   );
 
@@ -99,7 +99,7 @@ export function buildGameFromScenario(input: BuildGameFromScenarioInput): Game {
           intelligence: [],
           hiddenTracks: {},
           secretFlags: [],
-          visibleOptionIds: [],
+          availableOptions: [],
           metadata: {}
         };
 
@@ -108,7 +108,8 @@ export function buildGameFromScenario(input: BuildGameFromScenarioInput): Game {
         gameId,
         playerId: player.id,
         turnNumber: scenario.startingTurn,
-        visibleOptionIds: availableOptions.map((option) => option.id)
+        availableOptions:
+          player.factionId === currentFactionId ? availableOptions : []
       };
     });
 
@@ -125,26 +126,28 @@ export function buildGameFromScenario(input: BuildGameFromScenarioInput): Game {
       gameId
     })),
     factions: scenario.factions,
-    publicState: {
-      ...scenario.openingState.publicState,
-      gameId,
-      turnNumber: scenario.startingTurn,
-      activeFactionId: currentFactionId,
-      availableOptions,
-      updatedAt: now
+    state: {
+      public: {
+        ...scenario.openingState.publicState,
+        gameId,
+        turnNumber: scenario.startingTurn,
+        activeFactionId: currentFactionId,
+        updatedAt: now
+      },
+      privateByPlayer: privatePlayerStates,
+      derived: {
+        ...scenario.openingState.derivedState,
+        gameId,
+        turnNumber: scenario.startingTurn,
+        actingPlayerIds: players
+          .filter((player) => player.factionId === currentFactionId)
+          .map((player) => player.id),
+        legalActionIds: availableOptions.map((option) => option.id),
+        recommendedActionIds: availableOptions
+          .filter((option) => (option.recommendationPercent ?? 0) >= 60)
+          .map((option) => option.id)
+      }
     },
-    privatePlayerStates,
-    derivedState: {
-      ...scenario.openingState.derivedState,
-      gameId,
-      turnNumber: scenario.startingTurn,
-      actingPlayerIds: players.filter((player) => player.factionId === currentFactionId).map((player) => player.id),
-      legalActionIds: availableOptions.map((option) => option.id),
-      recommendedActionIds: availableOptions
-        .filter((option) => (option.recommendationPercent ?? 0) >= 60)
-        .map((option) => option.id)
-    },
-    availableOptions,
     advisorAnswers: [],
     lastResolution: null,
     createdAt: now,

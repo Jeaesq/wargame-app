@@ -12,7 +12,12 @@ export class StaticTurnResolutionService implements TurnResolutionService {
 
   async resolveTurn(input: ResolveTurnInput): Promise<ResolveTurnResult> {
     const { action, game, scenario } = input;
-    const option = game.availableOptions.find((candidate) => candidate.id === action.optionId);
+    const actingPrivateState = game.state.privateByPlayer.find(
+      (state) => state.playerId === action.playerId
+    );
+    const option = actingPrivateState?.availableOptions.find(
+      (candidate) => candidate.id === action.optionId
+    );
 
     if (!option) {
       throw new ValidationError(`Option ${action.optionId} is not legal for this turn.`);
@@ -30,7 +35,7 @@ export class StaticTurnResolutionService implements TurnResolutionService {
         : game.currentFactionId;
     const nextTurnNumber = game.turnNumber + 1;
     const tensionDelta = option.kind === "military_signal" ? 12 : option.kind === "economic" ? 7 : 4;
-    const nextWorldTension = clampPercentage(game.publicState.worldTension + tensionDelta);
+    const nextWorldTension = clampPercentage(game.state.public.worldTension + tensionDelta);
     const nextOptions = scenario.choiceCatalog.filter(
       (candidate) => candidate.factionId === nextFactionId
     );
@@ -44,8 +49,14 @@ export class StaticTurnResolutionService implements TurnResolutionService {
       status: "resolved",
       appliedOptionId: option.id,
       actingFactionId: action.factionId,
+      selectedAction: {
+        optionId: option.id,
+        title: option.title,
+        kind: option.kind,
+        recommendationPercent: option.recommendationPercent ?? null
+      },
       publicSummary: `${option.title} has been executed, shifting crisis pressure into the next turn.`,
-      privateSummaries: game.privatePlayerStates
+      privateSummaries: game.state.privateByPlayer
         .filter((state) => state.factionId === action.factionId)
         .map((state) => ({
           playerId: state.playerId,
@@ -57,11 +68,42 @@ export class StaticTurnResolutionService implements TurnResolutionService {
         `option:${option.id}`,
         `world_tension:+${tensionDelta}`
       ],
+      stateChanges: [
+        {
+          key: "worldTension",
+          label: "World Tension",
+          previousValue: game.state.public.worldTension,
+          newValue: nextWorldTension,
+          delta: nextWorldTension - game.state.public.worldTension,
+          visibility: "public"
+        },
+        {
+          key: "escalationRiskPercent",
+          label: "Escalation Risk",
+          previousValue: game.state.derived.escalationRiskPercent,
+          newValue: clampPercentage(
+            game.state.derived.escalationRiskPercent + Math.round(tensionDelta / 2)
+          ),
+          delta:
+            clampPercentage(
+              game.state.derived.escalationRiskPercent + Math.round(tensionDelta / 2)
+            ) - game.state.derived.escalationRiskPercent,
+          visibility: "derived"
+        }
+      ],
       updatedTracks: {
-        ...game.publicState.visibleTracks,
+        ...game.state.public.visibleTracks,
         worldTension: nextWorldTension
       },
       escalated: tensionDelta >= 10,
+      recommendationLabels:
+        (option.recommendationPercent ?? 0) >= 60 ? ["advisor-favored"] : ["situational"],
+      riskLabels:
+        tensionDelta >= 10
+          ? ["high-escalation-risk", "high-visibility"]
+          : tensionDelta >= 7
+            ? ["medium-escalation-risk"]
+            : ["measured-risk"],
       llmNarrative: {
         headline: `Turn ${game.turnNumber}: ${option.title}`,
         publicSummary:
@@ -91,48 +133,57 @@ export class StaticTurnResolutionService implements TurnResolutionService {
       turnNumber: nextTurnNumber,
       phase: "briefing",
       currentFactionId: nextFactionId,
-      publicState: {
-        ...game.publicState,
-        turnNumber: nextTurnNumber,
-        phase: "briefing",
-        activeFactionId: nextFactionId,
-        worldTension: nextWorldTension,
-        publicNarrative: resolution.llmNarrative.publicSummary,
-        headline: resolution.llmNarrative.headline,
-        availableOptions: nextOptions,
-        updatedAt: resolvedAt
+      state: {
+        public: {
+          ...game.state.public,
+          turnNumber: nextTurnNumber,
+          phase: "briefing",
+          activeFactionId: nextFactionId,
+          worldTension: nextWorldTension,
+          publicNarrative: resolution.llmNarrative.publicSummary,
+          headline: resolution.llmNarrative.headline,
+          updatedAt: resolvedAt
+        },
+        privateByPlayer: game.state.privateByPlayer.map((state) => ({
+          ...state,
+          turnNumber: nextTurnNumber,
+          privateBriefing:
+            state.factionId === nextFactionId
+              ? `Prepare for the next move. ${scenario.title} remains unresolved.`
+              : state.factionId === action.factionId
+                ? `Post-action assessment: ${option.title} increased pressure and drew fresh scrutiny.`
+                : state.privateBriefing,
+          intelligence:
+            state.factionId === nextFactionId
+              ? [
+                  `Placeholder intelligence: ${nextFactionId} now faces the next decision window.`,
+                  `Current world tension stands at ${nextWorldTension}%.`
+                ]
+              : state.intelligence,
+          availableOptions:
+            state.factionId === nextFactionId ? nextOptions : []
+        })),
+        derived: {
+          ...game.state.derived,
+          turnNumber: nextTurnNumber,
+          actingPlayerIds: game.players
+            .filter((player) => player.factionId === nextFactionId)
+            .map((player) => player.id),
+          legalActionIds: nextOptions.map((candidate) => candidate.id),
+          recommendedActionIds: nextOptions
+            .filter((candidate) => (candidate.recommendationPercent ?? 0) >= 60)
+            .map((candidate) => candidate.id),
+          escalationRiskPercent: clampPercentage(
+            game.state.derived.escalationRiskPercent + Math.round(tensionDelta / 2)
+          ),
+          warnings: resolution.escalated
+            ? [
+                ...game.state.derived.warnings,
+                "Recent action increased escalation pressure."
+              ]
+            : game.state.derived.warnings
+        }
       },
-      privatePlayerStates: game.privatePlayerStates.map((state) => ({
-        ...state,
-        turnNumber: nextTurnNumber,
-        privateBriefing:
-          state.factionId === nextFactionId
-            ? `Prepare for the next move. ${scenario.title} remains unresolved.`
-            : state.privateBriefing,
-        visibleOptionIds:
-          state.factionId === nextFactionId ? nextOptions.map((candidate) => candidate.id) : []
-      })),
-      derivedState: {
-        ...game.derivedState,
-        turnNumber: nextTurnNumber,
-        actingPlayerIds: game.players
-          .filter((player) => player.factionId === nextFactionId)
-          .map((player) => player.id),
-        legalActionIds: nextOptions.map((candidate) => candidate.id),
-        recommendedActionIds: nextOptions
-          .filter((candidate) => (candidate.recommendationPercent ?? 0) >= 60)
-          .map((candidate) => candidate.id),
-        escalationRiskPercent: clampPercentage(
-          game.derivedState.escalationRiskPercent + Math.round(tensionDelta / 2)
-        ),
-        warnings: resolution.escalated
-          ? [
-              ...game.derivedState.warnings,
-              "Recent action increased escalation pressure."
-            ]
-          : game.derivedState.warnings
-      },
-      availableOptions: nextOptions,
       advisorAnswers: [],
       lastResolution: resolution,
       updatedAt: resolvedAt

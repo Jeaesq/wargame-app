@@ -26,7 +26,7 @@ export default async function TurnPage({ params }: TurnPageProps) {
   const currentHumanPlayer =
     game.players.find((player) => player.role === "human" && player.factionId === game.currentFactionId) ??
     game.players.find((player) => player.role === "human");
-  const privateState = game.privatePlayerStates.find(
+  const privateState = game.state.privateByPlayer.find(
     (state) => state.playerId === currentHumanPlayer?.id
   ) ?? null;
   const advisorAnswer = game.advisorAnswers.at(-1) ?? null;
@@ -42,7 +42,7 @@ export default async function TurnPage({ params }: TurnPageProps) {
         <div className="turn-grid">
           <div className="section-stack">
             <TurnActionForm game={game} />
-            <OptionsList options={game.availableOptions} />
+            <OptionsList options={privateState?.availableOptions ?? []} />
             <PublicStatePanel game={game} />
           </div>
           <div className="section-stack">

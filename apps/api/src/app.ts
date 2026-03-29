@@ -1,9 +1,9 @@
-import { createColdWarScenarioDefinition } from "./scenarios/cold-war-scenario.js";
 import { Router, type ApiServices } from "./http/router.js";
 import { registerAdvisorRoutes } from "./routes/advisor-routes.js";
 import { registerGameRoutes } from "./routes/games-routes.js";
 import { registerHealthRoutes } from "./routes/health-routes.js";
 import { registerTurnRoutes } from "./routes/turns-routes.js";
+import { getScenarioDefinitions } from "./scenarios/index.js";
 import { InMemoryGameRepository } from "./services/in-memory-game-repository.js";
 import { InMemoryScenarioRepository } from "./services/in-memory-scenario-repository.js";
 import { StaticAdvisorService } from "./services/static-advisor-service.js";
@@ -14,9 +14,7 @@ export function createApp() {
   const services: ApiServices = {
     advisorService: new StaticAdvisorService(now),
     gameRepository: new InMemoryGameRepository(),
-    scenarioRepository: new InMemoryScenarioRepository([
-      createColdWarScenarioDefinition()
-    ]),
+    scenarioRepository: new InMemoryScenarioRepository(getScenarioDefinitions()),
     turnResolutionService: new StaticTurnResolutionService(now),
     now
   };

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdvisorChatPanel } from "../../../components/advisor-chat-panel";
+import { DerivedStatePanel } from "../../../components/derived-state-panel";
 import { PageHeader } from "../../../components/page-header";
 import { PrivateIntelligencePanel } from "../../../components/private-intelligence-panel";
 import { PublicStatePanel } from "../../../components/public-state-panel";
@@ -29,7 +30,7 @@ export default async function GameDetailPage({ params }: GameDetailPageProps) {
   const currentHumanPlayer =
     game.players.find((player) => player.role === "human" && player.factionId === game.currentFactionId) ??
     game.players.find((player) => player.role === "human");
-  const privateState = game.privatePlayerStates.find(
+  const privateState = game.state.privateByPlayer.find(
     (state) => state.playerId === currentHumanPlayer?.id
   ) ?? null;
   const advisorAnswer = game.advisorAnswers.at(-1) ?? null;
@@ -49,9 +50,16 @@ export default async function GameDetailPage({ params }: GameDetailPageProps) {
         />
         <div className="dashboard-grid">
           <div className="section-stack">
-            {scenario ? <ScenarioBriefing game={game} scenario={scenario} /> : null}
-            <PublicStatePanel game={game} />
-            <TurnHistory turns={turnHistory} />
+            <section className="section-stack current-state-section">
+              <div className="section-label">Current State</div>
+              {scenario ? <ScenarioBriefing game={game} scenario={scenario} /> : null}
+              <PublicStatePanel game={game} />
+              <DerivedStatePanel derivedState={game.state.derived} />
+            </section>
+            <section className="section-stack history-section">
+              <div className="section-label">Historical Turns</div>
+              <TurnHistory turns={turnHistory} />
+            </section>
           </div>
           <div className="section-stack">
             <PrivateIntelligencePanel privateState={privateState} />

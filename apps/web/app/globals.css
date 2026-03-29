@@ -193,6 +193,15 @@ textarea {
   padding: 1.1rem;
 }
 
+.current-state-section .panel {
+  background: rgba(255, 252, 247, 0.94);
+}
+
+.history-section .panel,
+.history-panel {
+  background: rgba(248, 245, 239, 0.82);
+}
+
 .panel h2,
 .panel h3 {
   margin: 0 0 0.8rem;
@@ -247,6 +256,10 @@ textarea {
   padding: 0.9rem;
 }
 
+.history-item {
+  border-left: 3px solid rgba(36, 48, 58, 0.24);
+}
+
 .option-card {
   display: grid;
   gap: 0.55rem;
@@ -270,6 +283,25 @@ textarea {
   background: rgba(255, 255, 255, 0.6);
   padding: 0.25rem 0.5rem;
   font-size: 0.85rem;
+}
+
+.pill--risk {
+  border-color: rgba(141, 63, 47, 0.22);
+  background: rgba(141, 63, 47, 0.08);
+}
+
+.section-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.history-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .highlight {

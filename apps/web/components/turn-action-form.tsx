@@ -16,6 +16,9 @@ export function TurnActionForm({ game }: TurnActionFormProps) {
     game.players.find(
       (player) => player.role === "human" && player.factionId === game.currentFactionId
     ) ?? game.players.find((player) => player.role === "human");
+  const privateState = game.state.privateByPlayer.find(
+    (state) => state.playerId === actingPlayer?.id
+  );
 
   if (!actingPlayer || !actingPlayer.factionId) {
     return (
@@ -39,7 +42,7 @@ export function TurnActionForm({ game }: TurnActionFormProps) {
         <input name="playerId" type="hidden" value={actingPlayer.id} />
         <input name="factionId" type="hidden" value={actingPlayer.factionId} />
         <div className="section-stack">
-          {game.availableOptions.map((option) => (
+          {(privateState?.availableOptions ?? []).map((option) => (
             <button
               className="option-card option-button"
               disabled={pending}
@@ -57,6 +60,9 @@ export function TurnActionForm({ game }: TurnActionFormProps) {
             </button>
           ))}
         </div>
+        {!privateState?.availableOptions.length ? (
+          <p className="muted">No private action options are available for this player right now.</p>
+        ) : null}
         {state.error ? <p className="form-error">{state.error}</p> : null}
       </form>
     </section>

@@ -112,7 +112,6 @@ export const publicGameStateSchema = z.object({
   visibleTracks: statsMapSchema,
   publicFlags: tagsSchema,
   revealedEvents: z.array(z.string()).default([]),
-  availableOptions: z.array(choiceOptionSchema).default([]),
   updatedAt: isoTimestampSchema,
   metadata: metadataSchema
 });
@@ -126,7 +125,7 @@ export const privatePlayerStateSchema = z.object({
   intelligence: z.array(z.string()).default([]),
   hiddenTracks: statsMapSchema,
   secretFlags: tagsSchema,
-  visibleOptionIds: z.array(z.string()).default([]),
+  availableOptions: z.array(choiceOptionSchema).default([]),
   metadata: metadataSchema
 });
 
@@ -189,6 +188,22 @@ export const llmNarrativeUpdateSchema = z.object({
   metadata: metadataSchema
 });
 
+export const resolvedActionSummarySchema = z.object({
+  optionId: z.string().min(1),
+  title: z.string().min(1),
+  kind: actionKindSchema,
+  recommendationPercent: z.number().min(0).max(100).nullable().default(null)
+});
+
+export const stateChangeSchema = z.object({
+  key: z.string().min(1),
+  label: z.string().min(1),
+  previousValue: z.number().nullable().default(null),
+  newValue: z.number(),
+  delta: z.number(),
+  visibility: z.enum(["public", "private", "derived"]).default("public")
+});
+
 export const turnResolutionSchema = z.object({
   id: z.string().min(1),
   gameId: z.string().min(1),
@@ -197,6 +212,7 @@ export const turnResolutionSchema = z.object({
   status: resolutionStatusSchema,
   appliedOptionId: z.string().min(1),
   actingFactionId: z.string().min(1),
+  selectedAction: resolvedActionSummarySchema,
   publicSummary: z.string().min(1),
   privateSummaries: z
     .array(
@@ -209,8 +225,11 @@ export const turnResolutionSchema = z.object({
     )
     .default([]),
   effects: z.array(z.string()).default([]),
+  stateChanges: z.array(stateChangeSchema).default([]),
   updatedTracks: statsMapSchema,
   escalated: z.boolean().default(false),
+  recommendationLabels: tagsSchema,
+  riskLabels: tagsSchema,
   llmNarrative: llmNarrativeUpdateSchema,
   resolvedAt: isoTimestampSchema,
   metadata: metadataSchema
@@ -230,8 +249,7 @@ export const scenarioDefinitionSchema = z.object({
   openingState: z.object({
     publicState: publicGameStateSchema.omit({
       gameId: true,
-      updatedAt: true,
-      availableOptions: true
+      updatedAt: true
     }),
     privateStates: z.array(
       privatePlayerStateSchema.omit({
@@ -246,7 +264,8 @@ export const scenarioDefinitionSchema = z.object({
       actingPlayerIds: true,
       legalActionIds: true,
       recommendedActionIds: true
-    })
+    }),
+    initialOptions: z.array(choiceOptionSchema).default([])
   }),
   choiceCatalog: z.array(choiceOptionSchema).default([]),
   metadata: metadataSchema
@@ -262,10 +281,11 @@ export const gameSchema = z.object({
   currentFactionId: z.string().min(1).nullable(),
   players: z.array(playerSchema).default([]),
   factions: z.array(factionSchema).default([]),
-  publicState: publicGameStateSchema,
-  privatePlayerStates: z.array(privatePlayerStateSchema).default([]),
-  derivedState: derivedGameStateSchema,
-  availableOptions: z.array(choiceOptionSchema).default([]),
+  state: z.object({
+    public: publicGameStateSchema,
+    privateByPlayer: z.array(privatePlayerStateSchema).default([]),
+    derived: derivedGameStateSchema
+  }),
   advisorAnswers: z.array(advisorAnswerSchema).default([]),
   lastResolution: turnResolutionSchema.nullable().default(null),
   createdAt: isoTimestampSchema,
@@ -335,6 +355,8 @@ export type TurnResolution = z.infer<typeof turnResolutionSchema>;
 export type AdvisorAnswer = z.infer<typeof advisorAnswerSchema>;
 export type ScenarioDefinition = z.infer<typeof scenarioDefinitionSchema>;
 export type ChoiceOption = z.infer<typeof choiceOptionSchema>;
+export type ResolvedActionSummary = z.infer<typeof resolvedActionSummarySchema>;
+export type StateChange = z.infer<typeof stateChangeSchema>;
 export type CreateGameRequest = z.infer<typeof createGameRequestSchema>;
 export type GamesListResponse = z.infer<typeof gamesListResponseSchema>;
 export type ScenariosListResponse = z.infer<typeof scenariosListResponseSchema>;

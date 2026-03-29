@@ -53,7 +53,12 @@ export function registerTurnRoutes(router: Router): void {
         throw new NotFoundError(`Scenario ${game.scenarioId} was not found.`);
       }
 
-      const option = game.availableOptions.find((candidate) => candidate.id === input.optionId);
+      const privateState = game.state.privateByPlayer.find(
+        (state) => state.playerId === input.playerId
+      );
+      const option = privateState?.availableOptions.find(
+        (candidate) => candidate.id === input.optionId
+      );
 
       if (!option) {
         throw new ValidationError(`Option ${input.optionId} is not available this turn.`);

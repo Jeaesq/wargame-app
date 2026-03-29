@@ -1,6 +1,6 @@
 import { scenarioDefinitionSchema } from "@wargame/shared";
 
-export function createColdWarScenarioDefinition() {
+export function createColdWarMvpScenarioDefinition() {
   return scenarioDefinitionSchema.parse({
     id: "scenario-cold-war-berlin-mvp",
     slug: "cold-war-berlin-mvp",
@@ -76,7 +76,7 @@ export function createColdWarScenarioDefinition() {
             domesticPressure: 48
           },
           secretFlags: ["backchannel-open"],
-          visibleOptionIds: [],
+          availableOptions: [],
           metadata: {}
         },
         {
@@ -91,7 +91,7 @@ export function createColdWarScenarioDefinition() {
             pressureWindow: 67
           },
           secretFlags: ["pressure-advantage"],
-          visibleOptionIds: [],
+          availableOptions: [],
           metadata: {}
         }
       ],
@@ -107,7 +107,35 @@ export function createColdWarScenarioDefinition() {
         },
         warnings: ["Misreading intentions could cause rapid crisis escalation."],
         metadata: {}
-      }
+      },
+      initialOptions: [
+        {
+          id: "option-usa-protest",
+          scenarioId: "scenario-cold-war-berlin-mvp",
+          factionId: "faction-usa",
+          kind: "diplomatic",
+          title: "Issue a formal protest",
+          summary: "Condemn access restrictions while keeping military posture stable.",
+          visibility: "public",
+          requirementTags: ["briefing"],
+          consequenceHints: ["lower-escalation", "limited-leverage"],
+          recommendationPercent: 61,
+          metadata: {}
+        },
+        {
+          id: "option-usa-airlift",
+          scenarioId: "scenario-cold-war-berlin-mvp",
+          factionId: "faction-usa",
+          kind: "military_signal",
+          title: "Expand airlift operations",
+          summary: "Demonstrate resolve without direct ground confrontation.",
+          visibility: "public",
+          requirementTags: ["briefing"],
+          consequenceHints: ["higher-risk", "alliance-credibility"],
+          recommendationPercent: 68,
+          metadata: {}
+        }
+      ]
     },
     choiceCatalog: [
       {
@@ -163,6 +191,9 @@ export function createColdWarScenarioDefinition() {
         metadata: {}
       }
     ],
-    metadata: {}
+    metadata: {
+      family: "cold-war",
+      order: 1
+    }
   });
 }
