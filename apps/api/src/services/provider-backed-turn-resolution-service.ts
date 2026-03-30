@@ -9,6 +9,7 @@ import {
 } from "@wargame/shared";
 import { randomUUID } from "node:crypto";
 import { ValidationError } from "../errors/app-error.js";
+import { logInfo } from "../logger.js";
 import type { TurnGenerationProvider } from "../providers/types.js";
 import type {
   ResolveTurnInput,
@@ -113,6 +114,14 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
         worldUpdateSuggestions,
         integrationReady: "provider-turn-generation"
       }
+    });
+
+    logInfo("Turn artifacts validated.", {
+      providerResult: String(artifacts.metadata.provider ?? "unknown"),
+      usedFallback: Boolean(artifacts.metadata.fallbackProvider),
+      gameId: input.game.id,
+      turnNumber: input.game.turnNumber,
+      actionId: input.action.id
     });
 
     const updatedGame = this.applyValidatedArtifacts({

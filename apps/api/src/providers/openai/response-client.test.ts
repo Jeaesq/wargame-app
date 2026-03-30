@@ -38,6 +38,7 @@ test("requestStructuredOutput rejects schemas with non-strict object nodes befor
         "Structured output schema is incompatible with OpenAI Responses API."
       );
       assert.deepEqual(error.details, {
+        failureStage: "schema_construction",
         schemaName: "invalid_schema",
         issues: ["properties.metadata must set additionalProperties: false"]
       });

@@ -29,6 +29,7 @@ export function assertStructuredOutputSchemaIsCompatible(
     throw new ProviderInvocationError(
       "Structured output schema is incompatible with OpenAI Responses API.",
       {
+        failureStage: "schema_construction",
         schemaName,
         issues
       }

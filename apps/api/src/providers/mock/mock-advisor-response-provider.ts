@@ -1,4 +1,5 @@
 import { advisorResponsePayloadSchema } from "@wargame/shared";
+import { logInfo } from "../../logger.js";
 import type {
   AdvisorResponseProvider,
   AdvisorResponseProviderInput
@@ -8,6 +9,12 @@ export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
   async generateAdvisorResponse(
     input: AdvisorResponseProviderInput
   ): Promise<unknown> {
+    logInfo("Advisor provider path selected.", {
+      provider: "mock",
+      gameId: input.context.gameId,
+      turnNumber: input.context.turnNumber
+    });
+
     const normalizedQuestion = input.question.trim().toLowerCase();
     const rankedOptions = [...input.context.visibleOptions].sort(
       (left, right) =>
@@ -90,7 +97,7 @@ export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
       ];
     }
 
-    return advisorResponsePayloadSchema.parse({
+    const payload = advisorResponsePayloadSchema.parse({
       summary,
       shortAnswer,
       rationale:
@@ -117,5 +124,15 @@ export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
         provider: "mock-advisor-response"
       }
     });
+
+    logInfo("Advisor provider result resolved.", {
+      providerPath: "mock",
+      resultProvider: String(payload.metadata.provider ?? "unknown"),
+      usedFallback: false,
+      gameId: input.context.gameId,
+      turnNumber: input.context.turnNumber
+    });
+
+    return payload;
   }
 }

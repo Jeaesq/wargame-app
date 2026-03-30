@@ -3,6 +3,7 @@ import {
   advisorResponsePayloadSchema
 } from "@wargame/shared";
 import { randomUUID } from "node:crypto";
+import { logInfo } from "../logger.js";
 import type { AdvisorResponseProvider } from "../providers/types.js";
 import type { AdvisorService, GenerateAdvisorAnswerInput } from "./types.js";
 
@@ -20,6 +21,13 @@ export class ProviderBackedAdvisorService implements AdvisorService {
       context: input.context
     });
     const payload = advisorResponsePayloadSchema.parse(rawResponse);
+
+    logInfo("Advisor answer validated.", {
+      providerResult: String(payload.metadata.provider ?? "unknown"),
+      usedFallback: Boolean(payload.metadata.fallbackProvider),
+      gameId: input.context.gameId,
+      turnNumber: input.context.turnNumber
+    });
 
     return advisorAnswerSchema.parse({
       answerId: randomUUID(),

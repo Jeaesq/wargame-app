@@ -1,12 +1,14 @@
 import { advisorResponsePayloadSchema } from "@wargame/shared";
-import { ZodError } from "zod";
-import { ProviderInvocationError } from "../../errors/app-error.js";
-import { logError, logInfo } from "../../logger.js";
+import { logInfo, logWarn, logError } from "../../logger.js";
 import { MockAdvisorResponseProvider } from "../mock/mock-advisor-response-provider.js";
 import type {
   AdvisorResponseProvider,
   AdvisorResponseProviderInput
 } from "../types.js";
+import {
+  classifyProviderFailure,
+  summarizeProviderFailure
+} from "../provider-observability.js";
 import { advisorResponsePayloadJsonSchema } from "./json-schemas.js";
 import { mapOpenAIAdvisorResponseOutput } from "./mappers.js";
 import { buildOpenAIAdvisorPrompt } from "./prompts.js";
@@ -38,23 +40,31 @@ export class OpenAIAdvisorResponseProvider implements AdvisorResponseProvider {
         schema: advisorResponsePayloadJsonSchema
       });
 
-      return advisorResponsePayloadSchema.parse({
+      const payload = advisorResponsePayloadSchema.parse({
         ...mapOpenAIAdvisorResponseOutput(rawOutput),
         metadata: {
           provider: "openai-advisor-response"
         }
       });
-    } catch (error) {
-      const failure = classifyAdvisorFailure(error);
 
-      logError("OpenAI advisor provider failed; falling back to mock advisor.", {
+      logInfo("Advisor provider result resolved.", {
+        providerPath: "openai",
+        resultProvider: String(payload.metadata.provider ?? "unknown"),
+        usedFallback: false,
+        gameId: input.context.gameId,
+        turnNumber: input.context.turnNumber
+      });
+
+      return payload;
+    } catch (error) {
+      const failure = classifyProviderFailure(error);
+
+      logWarn("Advisor provider falling back to mock.", {
         gameId: input.context.gameId,
         turnNumber: input.context.turnNumber,
-        question: input.question,
-        failureStage: failure.stage,
-        reason: error instanceof Error ? error.message : "unknown",
-        details:
-          error instanceof ProviderInvocationError ? error.details : undefined
+        providerPath: "openai",
+        fallbackProvider: "mock",
+        ...summarizeProviderFailure(error)
       });
       return this.generateFallbackResponse(input, error);
     }
@@ -64,46 +74,48 @@ export class OpenAIAdvisorResponseProvider implements AdvisorResponseProvider {
     input: AdvisorResponseProviderInput,
     error: unknown
   ): Promise<unknown> {
-    const fallbackResponse = await this.fallbackProvider.generateAdvisorResponse(input);
-    const fallbackPayload = advisorResponsePayloadSchema.parse(fallbackResponse);
-    const fallbackReason =
-      error instanceof ProviderInvocationError ? "provider_invocation_error" : "invalid_provider_output";
-    const fallbackMessage =
-      error instanceof Error ? error.message : "Unknown advisor provider failure.";
+    try {
+      const fallbackResponse = await this.fallbackProvider.generateAdvisorResponse(input);
+      const fallbackPayload = advisorResponsePayloadSchema.parse(fallbackResponse);
+      const failure = classifyProviderFailure(error);
+      const fallbackReason =
+        failure.category === "response_validation"
+          ? "invalid_provider_output"
+          : "provider_invocation_error";
+      const fallbackMessage =
+        error instanceof Error ? error.message : "Unknown advisor provider failure.";
 
-    return advisorResponsePayloadSchema.parse({
-      ...fallbackPayload,
-      metadata: {
-        ...fallbackPayload.metadata,
-        provider: "openai-advisor-response-fallback",
-        fallbackProvider: "mock-advisor-response",
-        fallbackReason,
-        fallbackMessage
-      }
-    });
+      const payload = advisorResponsePayloadSchema.parse({
+        ...fallbackPayload,
+        metadata: {
+          ...fallbackPayload.metadata,
+          provider: "openai-advisor-response-fallback",
+          fallbackProvider: "mock-advisor-response",
+          fallbackReason,
+          fallbackMessage
+        }
+      });
+
+      logInfo("Advisor provider result resolved.", {
+        providerPath: "openai",
+        resultProvider: String(payload.metadata.provider ?? "unknown"),
+        usedFallback: true,
+        fallbackProvider: String(payload.metadata.fallbackProvider ?? "mock"),
+        gameId: input.context.gameId,
+        turnNumber: input.context.turnNumber
+      });
+
+      return payload;
+    } catch (fallbackError) {
+      logError("Advisor fallback provider failed.", {
+        gameId: input.context.gameId,
+        turnNumber: input.context.turnNumber,
+        providerPath: "openai",
+        fallbackProvider: "mock",
+        upstreamFailure: summarizeProviderFailure(error),
+        fallbackFailure: summarizeProviderFailure(fallbackError)
+      });
+      throw fallbackError;
+    }
   }
-}
-
-function classifyAdvisorFailure(error: unknown): {
-  stage: "schema_compatibility" | "provider_request" | "response_validation" | "unknown";
-} {
-  if (error instanceof ProviderInvocationError) {
-    return {
-      stage:
-        error.message ===
-        "Structured output schema is incompatible with OpenAI Responses API."
-          ? "schema_compatibility"
-          : "provider_request"
-    };
-  }
-
-  if (error instanceof ZodError) {
-    return {
-      stage: "response_validation"
-    };
-  }
-
-  return {
-    stage: "unknown"
-  };
 }

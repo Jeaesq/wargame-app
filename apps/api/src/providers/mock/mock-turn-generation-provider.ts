@@ -1,4 +1,5 @@
 import { turnGenerationArtifactsSchema } from "@wargame/shared";
+import { logInfo } from "../../logger.js";
 import type {
   TurnGenerationProvider,
   TurnGenerationProviderInput
@@ -6,9 +7,16 @@ import type {
 
 export class MockTurnGenerationProvider implements TurnGenerationProvider {
   async generateTurnArtifacts(input: TurnGenerationProviderInput): Promise<unknown> {
+    logInfo("Turn resolution provider path selected.", {
+      provider: "mock",
+      gameId: input.game.id,
+      turnNumber: input.game.turnNumber,
+      actionId: input.action.id
+    });
+
     const { action, game, selectedOption, tensionDelta } = input;
 
-    return turnGenerationArtifactsSchema.parse({
+    const payload = turnGenerationArtifactsSchema.parse({
       publicSummary: `${selectedOption.title} has been executed, shifting crisis pressure into the next turn.`,
       privateSummaries: game.state.privateByPlayer
         .filter((state) => state.factionId === action.factionId)
@@ -71,5 +79,16 @@ export class MockTurnGenerationProvider implements TurnGenerationProvider {
         provider: "mock-turn-generation"
       }
     });
+
+    logInfo("Turn provider result resolved.", {
+      providerPath: "mock",
+      resultProvider: String(payload.metadata.provider ?? "unknown"),
+      usedFallback: false,
+      gameId: input.game.id,
+      turnNumber: input.game.turnNumber,
+      actionId: input.action.id
+    });
+
+    return payload;
   }
 }

@@ -1,7 +1,11 @@
 import type { TurnGenerationProvider, TurnGenerationProviderInput } from "../types.js";
-import { ProviderInvocationError } from "../../errors/app-error.js";
-import { logError, logInfo } from "../../logger.js";
+import { turnGenerationArtifactsSchema } from "@wargame/shared";
+import { logError, logInfo, logWarn } from "../../logger.js";
 import { MockTurnGenerationProvider } from "../mock/mock-turn-generation-provider.js";
+import {
+  classifyProviderFailure,
+  summarizeProviderFailure
+} from "../provider-observability.js";
 import { turnGenerationArtifactsJsonSchema } from "./json-schemas.js";
 import { mapOpenAITurnGenerationOutput } from "./mappers.js";
 import { buildOpenAITurnGenerationPrompt } from "./prompts.js";
@@ -32,18 +36,69 @@ export class OpenAITurnGenerationProvider implements TurnGenerationProvider {
         schema: turnGenerationArtifactsJsonSchema
       });
 
-      return mapOpenAITurnGenerationOutput(rawOutput);
+      const payload = mapOpenAITurnGenerationOutput(rawOutput);
+      logInfo("Turn provider result resolved.", {
+        providerPath: "openai",
+        resultProvider: String(payload.metadata.provider ?? "openai-turn-generation"),
+        usedFallback: false,
+        gameId: input.game.id,
+        turnNumber: input.game.turnNumber,
+        actionId: input.action.id
+      });
+
+      return payload;
     } catch (error) {
-      logError("OpenAI turn generation provider failed.", {
+      logWarn("Turn provider falling back to mock.", {
         gameId: input.game.id,
         turnNumber: input.game.turnNumber,
         actionId: input.action.id,
-        reason: error instanceof Error ? error.message : "unknown",
-        details:
-          error instanceof ProviderInvocationError ? error.details : undefined
+        providerPath: "openai",
+        fallbackProvider: "mock",
+        ...summarizeProviderFailure(error)
       });
 
-      return this.fallbackProvider.generateTurnArtifacts(input);
+      try {
+        const fallbackResponse = await this.fallbackProvider.generateTurnArtifacts(input);
+        const fallbackPayload = turnGenerationArtifactsSchema.parse(fallbackResponse);
+        const failure = classifyProviderFailure(error);
+        const payload = turnGenerationArtifactsSchema.parse({
+          ...fallbackPayload,
+          metadata: {
+            ...fallbackPayload.metadata,
+            provider: "openai-turn-generation-fallback",
+            fallbackProvider: "mock-turn-generation",
+            fallbackReason:
+              failure.category === "response_validation"
+                ? "invalid_provider_output"
+                : "provider_invocation_error",
+            fallbackMessage:
+              error instanceof Error ? error.message : "Unknown turn provider failure."
+          }
+        });
+
+        logInfo("Turn provider result resolved.", {
+          providerPath: "openai",
+          resultProvider: String(payload.metadata.provider ?? "unknown"),
+          usedFallback: true,
+          fallbackProvider: String(payload.metadata.fallbackProvider ?? "mock"),
+          gameId: input.game.id,
+          turnNumber: input.game.turnNumber,
+          actionId: input.action.id
+        });
+
+        return payload;
+      } catch (fallbackError) {
+        logError("Turn fallback provider failed.", {
+          gameId: input.game.id,
+          turnNumber: input.game.turnNumber,
+          actionId: input.action.id,
+          providerPath: "openai",
+          fallbackProvider: "mock",
+          upstreamFailure: summarizeProviderFailure(error),
+          fallbackFailure: summarizeProviderFailure(fallbackError)
+        });
+        throw fallbackError;
+      }
     }
   }
 }

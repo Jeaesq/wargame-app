@@ -55,18 +55,25 @@ export class OpenAIResponsesClient {
       });
     } catch (error) {
       throw new ProviderInvocationError("OpenAI Responses API request failed.", {
+        failureStage: "api_request",
         cause: error instanceof Error ? error.message : "unknown",
-        schemaName: input.schemaName
+        schemaName: input.schemaName,
+        provider: "openai",
+        operation: "responses.create"
       });
     }
 
     if (!response.ok) {
-      const bodyText = await response.text();
+      const apiError = await extractOpenAIErrorDetails(response);
       throw new ProviderInvocationError("OpenAI Responses API request failed.", {
+        failureStage: "api_request",
         status: response.status,
         statusText: response.statusText,
-        body: bodyText.slice(0, 2000),
-        schemaName: input.schemaName
+        schemaName: input.schemaName,
+        provider: "openai",
+        operation: "responses.create",
+        requestId: response.headers.get("x-request-id") ?? undefined,
+        ...apiError
       });
     }
 
@@ -75,7 +82,13 @@ export class OpenAIResponsesClient {
 
     if (structuredOutput === null) {
       throw new ProviderInvocationError(
-        "OpenAI Responses API returned no structured output."
+        "OpenAI Responses API returned no structured output.",
+        {
+          failureStage: "response_validation",
+          schemaName: input.schemaName,
+          provider: "openai",
+          operation: "responses.create"
+        }
       );
     }
 
@@ -119,8 +132,47 @@ function parseJsonText(value: string): unknown {
     throw new ProviderInvocationError(
       "OpenAI Responses API returned text that was not valid JSON.",
       {
+        failureStage: "response_validation",
         cause: error instanceof Error ? error.message : "unknown"
       }
     );
   }
+}
+
+async function extractOpenAIErrorDetails(response: Response) {
+  const bodyText = await response.text();
+
+  try {
+    const payload = JSON.parse(bodyText) as {
+      error?: {
+        message?: unknown;
+        type?: unknown;
+        code?: unknown;
+        param?: unknown;
+      };
+    };
+
+    if (payload.error && typeof payload.error === "object") {
+      return {
+        providerErrorMessage:
+          typeof payload.error.message === "string"
+            ? payload.error.message
+            : undefined,
+        providerErrorType:
+          typeof payload.error.type === "string" ? payload.error.type : undefined,
+        providerErrorCode:
+          typeof payload.error.code === "string" ? payload.error.code : undefined,
+        providerErrorParam:
+          typeof payload.error.param === "string" ? payload.error.param : undefined
+      };
+    }
+  } catch {
+    return {
+      responseBodyExcerpt: bodyText.slice(0, 500)
+    };
+  }
+
+  return {
+    responseBodyExcerpt: bodyText.slice(0, 500)
+  };
 }
