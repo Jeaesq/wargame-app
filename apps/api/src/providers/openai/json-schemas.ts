@@ -2,6 +2,13 @@
 // They are suitable for an initial Responses API integration skeleton,
 // but they are not yet production-complete contracts.
 
+const strictEmptyObjectJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {},
+  required: []
+} as const;
+
 export const turnGenerationArtifactsJsonSchema = {
   type: "object",
   additionalProperties: false,
@@ -84,14 +91,12 @@ export const turnGenerationArtifactsJsonSchema = {
           items: { type: "string" }
         },
         metadata: {
-          type: "object",
-          additionalProperties: true
+          ...strictEmptyObjectJsonSchema
         }
       }
     },
     metadata: {
-      type: "object",
-      additionalProperties: true
+      ...strictEmptyObjectJsonSchema
     }
   }
 } as const;
@@ -140,8 +145,7 @@ export const advisorResponsePayloadJsonSchema = {
       items: { type: "string" }
     },
     metadata: {
-      type: "object",
-      additionalProperties: true
+      ...strictEmptyObjectJsonSchema
     }
   }
 } as const;
@@ -154,8 +158,7 @@ export const botDecisionPayloadJsonSchema = {
     optionId: { type: "string" },
     rationale: { type: "string" },
     metadata: {
-      type: "object",
-      additionalProperties: true
+      ...strictEmptyObjectJsonSchema
     }
   }
 } as const;

@@ -64,28 +64,51 @@ export function buildOpenAIAdvisorPrompt(
   instructions: string;
   prompt: string;
 } {
+  const visibleOptions = input.context.visibleOptions.map((option) => ({
+    id: option.id,
+    title: option.title,
+    summary: option.summary,
+    kind: option.kind,
+    recommendationPercent: option.recommendationPercent,
+    consequenceHints: option.consequenceHints,
+    requirementTags: option.requirementTags
+  }));
+
   return {
     instructions:
-      "You are an advisor for a Cold War crisis simulation. Answer only from player-visible information supplied in the prompt. Do not infer hidden intelligence or secret state. Return only JSON matching the requested schema.",
+      "You are an advisor for a Cold War crisis simulation. Answer only from player-visible information supplied in the prompt. Do not infer hidden intelligence, secret state, future turns, or backend-only rules outcomes. The backend is the source of truth for what is visible and legal. Return only JSON matching the requested schema.",
     prompt: JSON.stringify(
       {
         task: "Answer a player question from visible state only.",
         scenario: {
           id: input.scenario.id,
-          title: input.scenario.title
+          title: input.scenario.title,
+          historicalFrame: input.scenario.historicalFrame
         },
         question: input.question,
         visibleState: {
           turnNumber: input.context.turnNumber,
           factionId: input.context.factionId,
           publicState: input.context.publicState,
-          visibleOptions: input.context.visibleOptions,
-          visibleWarnings: input.context.visibleWarnings
+          visibleOptions,
+          visibleWarnings: input.context.visibleWarnings,
+          lastAdvisorAnswer: input.context.lastAdvisorAnswer
+            ? {
+                summary: input.context.lastAdvisorAnswer.summary,
+                shortAnswer: input.context.lastAdvisorAnswer.shortAnswer,
+                recommendationBand: input.context.lastAdvisorAnswer.recommendationBand,
+                confidenceLabel: input.context.lastAdvisorAnswer.confidenceLabel,
+                recommendedOptionIds:
+                  input.context.lastAdvisorAnswer.recommendedOptionIds
+              }
+            : null
         },
         rules: [
           "Do not mention hidden information.",
           "Recommendation percentages are advisory, not certain.",
-          "Keep the answer practical and short."
+          "Keep the answer practical and short.",
+          "Use recommendedOptionIds only for option ids that appear in visibleOptions.",
+          "If visibility is insufficient, say so plainly and lower confidence."
         ]
       },
       null,

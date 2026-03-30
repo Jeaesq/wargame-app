@@ -9,6 +9,9 @@ import {
 const trackedEnvironmentKeys = [
   "PORT",
   "PERSISTENCE_MODE",
+  "ADVISOR_PROVIDER",
+  "TURN_PROVIDER",
+  "BOT_PROVIDER",
   "AI_PROVIDER",
   "AI_PROVIDER_MODE",
   "DATABASE_URL",
@@ -62,22 +65,28 @@ test("defaults to the mock provider when AI_PROVIDER is unset", async () => {
   await withEnvironment({}, () => {
     const config = getAppConfig();
 
-    assert.equal(config.providers.mode, "mock");
+    assert.equal(config.providers.advisor, "mock");
+    assert.equal(config.providers.turn, "mock");
+    assert.equal(config.providers.bot, "mock");
     assert.equal(config.providers.openai, null);
   });
 });
 
-test("accepts AI_PROVIDER=openai when required OpenAI config is present", async () => {
+test("accepts split provider config when required OpenAI config is present", async () => {
   await withEnvironment(
     {
-      AI_PROVIDER: "openai",
+      ADVISOR_PROVIDER: "openai",
+      TURN_PROVIDER: "mock",
+      BOT_PROVIDER: "mock",
       OPENAI_API_KEY: "test-key",
       OPENAI_MODEL: "gpt-4.1-mini"
     },
     () => {
       const config = getAppConfig();
 
-      assert.equal(config.providers.mode, "openai");
+      assert.equal(config.providers.advisor, "openai");
+      assert.equal(config.providers.turn, "mock");
+      assert.equal(config.providers.bot, "mock");
       assert.deepEqual(config.providers.openai, {
         apiKey: "test-key",
         model: "gpt-4.1-mini",
@@ -87,37 +96,41 @@ test("accepts AI_PROVIDER=openai when required OpenAI config is present", async 
   );
 });
 
-test("fails clearly when AI_PROVIDER=openai is missing OPENAI_API_KEY", async () => {
+test("fails clearly when any OpenAI provider is missing OPENAI_API_KEY", async () => {
   await withEnvironment(
     {
-      AI_PROVIDER: "openai",
+      ADVISOR_PROVIDER: "openai",
       OPENAI_MODEL: "gpt-4.1-mini"
     },
     () => {
       assert.throws(
         () => getAppConfig(),
-        new ConfigError("AI_PROVIDER=openai requires OPENAI_API_KEY to be set.")
+        new ConfigError(
+          "OpenAI provider configuration requires OPENAI_API_KEY to be set."
+        )
       );
     }
   );
 });
 
-test("fails clearly when AI_PROVIDER=openai is missing OPENAI_MODEL", async () => {
+test("fails clearly when any OpenAI provider is missing OPENAI_MODEL", async () => {
   await withEnvironment(
     {
-      AI_PROVIDER: "openai",
+      TURN_PROVIDER: "openai",
       OPENAI_API_KEY: "test-key"
     },
     () => {
       assert.throws(
         () => getAppConfig(),
-        new ConfigError("AI_PROVIDER=openai requires OPENAI_MODEL to be set.")
+        new ConfigError(
+          "OpenAI provider configuration requires OPENAI_MODEL to be set."
+        )
       );
     }
   );
 });
 
-test("accepts legacy AI_PROVIDER_MODE when AI_PROVIDER is not set", async () => {
+test("accepts legacy AI_PROVIDER_MODE when split provider envs are not set", async () => {
   await withEnvironment(
     {
       AI_PROVIDER_MODE: "openai",
@@ -127,21 +140,25 @@ test("accepts legacy AI_PROVIDER_MODE when AI_PROVIDER is not set", async () => 
     () => {
       const config = getAppConfig();
 
-      assert.equal(config.providers.mode, "openai");
+      assert.equal(config.providers.advisor, "openai");
+      assert.equal(config.providers.turn, "openai");
+      assert.equal(config.providers.bot, "mock");
     }
   );
 });
 
-test("fails clearly when AI_PROVIDER and AI_PROVIDER_MODE conflict", async () => {
+test("fails clearly when ADVISOR_PROVIDER and legacy AI_PROVIDER_MODE conflict", async () => {
   await withEnvironment(
     {
-      AI_PROVIDER: "mock",
+      ADVISOR_PROVIDER: "mock",
       AI_PROVIDER_MODE: "openai"
     },
     () => {
       assert.throws(
         () => getAppConfig(),
-        new ConfigError("AI_PROVIDER=mock conflicts with AI_PROVIDER_MODE=openai.")
+        new ConfigError(
+          "ADVISOR_PROVIDER=mock conflicts with legacy AI_PROVIDER_MODE=openai."
+        )
       );
     }
   );

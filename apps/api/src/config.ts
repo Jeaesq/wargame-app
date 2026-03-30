@@ -13,6 +13,9 @@ const apiRootDirectory = path.resolve(
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   PERSISTENCE_MODE: persistenceModeSchema.default("memory"),
+  ADVISOR_PROVIDER: providerModeSchema.optional(),
+  TURN_PROVIDER: providerModeSchema.optional(),
+  BOT_PROVIDER: providerModeSchema.optional(),
   AI_PROVIDER: providerModeSchema.optional(),
   AI_PROVIDER_MODE: providerModeSchema.optional(),
   DATABASE_URL: z.string().min(1).optional(),
@@ -38,7 +41,9 @@ export type AppConfig = {
     mode: PersistenceMode;
   };
   providers: {
-    mode: ProviderMode;
+    advisor: ProviderMode;
+    turn: ProviderMode;
+    bot: ProviderMode;
     openai: {
       apiKey: string;
       model: string;
@@ -124,11 +129,12 @@ function parseEnvironmentValue(rawValue: string): string {
 
 function resolveProviderMode(
   provider: ProviderMode | undefined,
-  legacyProvider: ProviderMode | undefined
+  legacyProvider: ProviderMode | undefined,
+  label: string
 ): ProviderMode {
   if (provider && legacyProvider && provider !== legacyProvider) {
     throw new ConfigError(
-      `AI_PROVIDER=${provider} conflicts with AI_PROVIDER_MODE=${legacyProvider}.`
+      `${label}=${provider} conflicts with legacy AI_PROVIDER_MODE=${legacyProvider}.`
     );
   }
 
@@ -140,10 +146,21 @@ function parseEnvironment() {
 
   try {
     const env = envSchema.parse(process.env);
+    const legacyProvider = env.AI_PROVIDER ?? env.AI_PROVIDER_MODE;
 
     return {
       ...env,
-      AI_PROVIDER: resolveProviderMode(env.AI_PROVIDER, env.AI_PROVIDER_MODE)
+      ADVISOR_PROVIDER: resolveProviderMode(
+        env.ADVISOR_PROVIDER,
+        legacyProvider,
+        "ADVISOR_PROVIDER"
+      ),
+      TURN_PROVIDER: resolveProviderMode(
+        env.TURN_PROVIDER,
+        legacyProvider,
+        "TURN_PROVIDER"
+      ),
+      BOT_PROVIDER: resolveProviderMode(env.BOT_PROVIDER, undefined, "BOT_PROVIDER")
     };
   } catch (error) {
     if (error instanceof ConfigError) {
@@ -190,15 +207,20 @@ export function getAppConfig(): AppConfig {
     );
   }
 
-  if (env.AI_PROVIDER === "openai" && !env.OPENAI_API_KEY) {
+  const anyOpenAIProviderEnabled =
+    env.ADVISOR_PROVIDER === "openai" ||
+    env.TURN_PROVIDER === "openai" ||
+    env.BOT_PROVIDER === "openai";
+
+  if (anyOpenAIProviderEnabled && !env.OPENAI_API_KEY) {
     throw new ConfigError(
-      "AI_PROVIDER=openai requires OPENAI_API_KEY to be set."
+      "OpenAI provider configuration requires OPENAI_API_KEY to be set."
     );
   }
 
-  if (env.AI_PROVIDER === "openai" && !env.OPENAI_MODEL) {
+  if (anyOpenAIProviderEnabled && !env.OPENAI_MODEL) {
     throw new ConfigError(
-      "AI_PROVIDER=openai requires OPENAI_MODEL to be set."
+      "OpenAI provider configuration requires OPENAI_MODEL to be set."
     );
   }
 
@@ -208,7 +230,9 @@ export function getAppConfig(): AppConfig {
       mode: env.PERSISTENCE_MODE
     },
     providers: {
-      mode: env.AI_PROVIDER,
+      advisor: env.ADVISOR_PROVIDER,
+      turn: env.TURN_PROVIDER,
+      bot: env.BOT_PROVIDER,
       openai:
         env.OPENAI_API_KEY && env.OPENAI_MODEL
           ? {

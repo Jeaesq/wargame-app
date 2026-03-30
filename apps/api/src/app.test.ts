@@ -17,7 +17,9 @@ const testConfig: AppConfig = {
     mode: "memory"
   },
   providers: {
-    mode: "mock",
+    advisor: "mock",
+    turn: "mock",
+    bot: "mock",
     openai: null
   },
   database: null

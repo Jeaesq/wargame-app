@@ -26,6 +26,7 @@ import type {
   TurnRepository
 } from "./repositories/contracts.js";
 import { getScenarioDefinitions } from "./scenarios/index.js";
+import { logInfo } from "./logger.js";
 import { AdvisorQaService } from "./services/advisor-qa-service.js";
 import { GameSessionService } from "./services/game-session-service.js";
 import { ProviderBackedAdvisorService } from "./services/provider-backed-advisor-service.js";
@@ -65,29 +66,57 @@ function createProviders(config: AppConfig): {
   botDecisionProvider: BotDecisionProvider;
   advisorResponseProvider: AdvisorResponseProvider;
 } {
-  switch (config.providers.mode) {
-    case "mock":
-      return {
-        turnGenerationProvider: new MockTurnGenerationProvider(),
-        botDecisionProvider: new MockBotDecisionProvider(),
-        advisorResponseProvider: new MockAdvisorResponseProvider()
-      };
-    case "openai": {
-      const openai = config.providers.openai;
+  const openai = config.providers.openai;
+  const client = openai ? new OpenAIResponsesClient(openai) : null;
 
-      if (!openai) {
-        throw new Error("OpenAI provider mode requires server-side OpenAI config.");
-      }
+  const advisorResponseProvider =
+    config.providers.advisor === "openai"
+      ? createOpenAIAdvisorProvider(client)
+      : new MockAdvisorResponseProvider();
+  const turnGenerationProvider =
+    config.providers.turn === "openai"
+      ? createOpenAITurnProvider(client)
+      : new MockTurnGenerationProvider();
+  const botDecisionProvider =
+    config.providers.bot === "openai"
+      ? createOpenAIBotProvider(client)
+      : new MockBotDecisionProvider();
 
-      const client = new OpenAIResponsesClient(openai);
+  return {
+    turnGenerationProvider,
+    botDecisionProvider,
+    advisorResponseProvider
+  };
+}
 
-      return {
-        turnGenerationProvider: new OpenAITurnGenerationProvider(client),
-        botDecisionProvider: new OpenAIBotDecisionProvider(client),
-        advisorResponseProvider: new OpenAIAdvisorResponseProvider(client)
-      };
-    }
+function createOpenAIAdvisorProvider(
+  client: OpenAIResponsesClient | null
+): AdvisorResponseProvider {
+  if (!client) {
+    throw new Error("ADVISOR_PROVIDER=openai requires server-side OpenAI config.");
   }
+
+  return new OpenAIAdvisorResponseProvider(client);
+}
+
+function createOpenAITurnProvider(
+  client: OpenAIResponsesClient | null
+): TurnGenerationProvider {
+  if (!client) {
+    throw new Error("TURN_PROVIDER=openai requires server-side OpenAI config.");
+  }
+
+  return new OpenAITurnGenerationProvider(client);
+}
+
+function createOpenAIBotProvider(
+  client: OpenAIResponsesClient | null
+): BotDecisionProvider {
+  if (!client) {
+    throw new Error("BOT_PROVIDER=openai requires server-side OpenAI config.");
+  }
+
+  return new OpenAIBotDecisionProvider(client);
 }
 
 export function createApiServices(config: AppConfig = getAppConfig()): ApiServices {
@@ -100,6 +129,11 @@ export function createApiServices(config: AppConfig = getAppConfig()): ApiServic
     botDecisionProvider,
     advisorResponseProvider
   } = createProviders(config);
+  logInfo("Provider selection resolved.", {
+    advisorProvider: config.providers.advisor,
+    turnProvider: config.providers.turn,
+    botProvider: config.providers.bot
+  });
   const scenarioRepository = new StaticScenarioRepository(getScenarioDefinitions());
   const sessionViewRepository = new RepositoryBackedSessionViewRepository(
     gameSessionRepository

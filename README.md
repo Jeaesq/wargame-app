@@ -56,7 +56,7 @@ API_BASE_URL=http://localhost:4000 npm run dev:web
 ## Run with PostgreSQL
 
 The backend supports `PERSISTENCE_MODE=postgres` for database-backed session and turn persistence.
-LLM-facing behavior is currently served by the default mock provider selected with `AI_PROVIDER=mock`.
+LLM-facing behavior is currently served by mock providers by default.
 
 ### 1. Start PostgreSQL locally
 
@@ -98,8 +98,11 @@ If `PERSISTENCE_MODE=postgres` is selected without `DATABASE_URL`, the API exits
 
 The backend now routes turn narration support, bot decision support, and advisor answers through a provider layer.
 
-- `AI_PROVIDER=mock` is the current default
-- `AI_PROVIDER=openai` enables the non-default OpenAI Responses API path
+- `ADVISOR_PROVIDER=mock` is the default
+- `TURN_PROVIDER=mock` is the default
+- `BOT_PROVIDER=mock` is the default
+- `ADVISOR_PROVIDER=openai` enables the OpenAI advisor path without changing turn resolution
+- `TURN_PROVIDER=openai` is optional and non-default
 - the backend still owns canonical state, legal actions, validation, and persistence
 - future real LLM-backed providers can be added behind the same composition seam without changing the frontend API
 
@@ -111,7 +114,9 @@ The repository includes a server-side OpenAI provider path for the API. It is op
 
 ```bash
 cat <<'EOF' > apps/api/.env.local
-AI_PROVIDER=openai
+ADVISOR_PROVIDER=openai
+TURN_PROVIDER=mock
+BOT_PROVIDER=mock
 OPENAI_API_KEY=your_openai_api_key
 OPENAI_MODEL=gpt-4.1-mini
 EOF
@@ -130,7 +135,7 @@ npm run dev
 3. Optional: override values directly in the shell for one-off runs:
 
 ```bash
-AI_PROVIDER=openai OPENAI_API_KEY=your_openai_api_key OPENAI_MODEL=gpt-4.1-mini npm run dev:api
+ADVISOR_PROVIDER=openai TURN_PROVIDER=mock BOT_PROVIDER=mock OPENAI_API_KEY=your_openai_api_key OPENAI_MODEL=gpt-4.1-mini npm run dev:api
 ```
 
 Optional backend-only setting:
@@ -139,11 +144,11 @@ Optional backend-only setting:
 
 Notes:
 
-- if `AI_PROVIDER=openai` is selected without `OPENAI_API_KEY` or `OPENAI_MODEL`, the API exits immediately with a clear configuration error
+- if any provider is set to `openai` without `OPENAI_API_KEY` or `OPENAI_MODEL`, the API exits immediately with a clear configuration error
 - all OpenAI secrets stay server-side in `apps/api/.env.local` or the API process environment only
 - normal local development does not require OpenAI credentials
 - canonical state still remains backend-owned; the provider returns structured artifacts only
-- the current mock provider remains the default runtime behavior unless you explicitly switch `AI_PROVIDER`
+- normal gameplay stays on mock unless you explicitly switch a provider
 
 ## Other commands
 
