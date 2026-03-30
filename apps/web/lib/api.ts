@@ -125,3 +125,150 @@ export async function askAdvisor(
     advisorAnswerSchema
   );
 }
+
+export type AdvisorStreamEvent =
+  | {
+      event: "status";
+      data: {
+        stage: string;
+      };
+    }
+  | {
+      event: "answer";
+      data: AdvisorAnswer;
+    }
+  | {
+      event: "done";
+      data: {
+        ok: boolean;
+      };
+    }
+  | {
+      event: "error";
+      data: {
+        message: string;
+        code: string;
+      };
+    };
+
+export async function askAdvisorStream(
+  gameId: string,
+  input: {
+    question: string;
+    factionId?: string | null;
+    playerId?: string;
+  }
+): Promise<ReadableStream<AdvisorStreamEvent>> {
+  const body = advisorQuestionRequestSchema.parse(input);
+  const response = await fetch(`${apiBaseUrl}/games/${gameId}/advisor/stream`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body),
+    cache: "no-store"
+  });
+
+  if (!response.ok || !response.body) {
+    const payload = await response.json().catch(() => null);
+    const message =
+      payload && typeof payload === "object" && "error" in payload
+        ? String((payload as { error?: { message?: string } }).error?.message ?? "Request failed.")
+        : "Request failed.";
+    throw new Error(message);
+  }
+
+  return createAdvisorEventStream(response.body);
+}
+
+function createAdvisorEventStream(
+  body: ReadableStream<Uint8Array>
+): ReadableStream<AdvisorStreamEvent> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  return new ReadableStream<AdvisorStreamEvent>({
+    async pull(controller) {
+      while (true) {
+        const boundaryIndex = buffer.indexOf("\n\n");
+
+        if (boundaryIndex >= 0) {
+          const chunk = buffer.slice(0, boundaryIndex);
+          buffer = buffer.slice(boundaryIndex + 2);
+          const event = parseAdvisorStreamChunk(chunk);
+
+          if (event) {
+            controller.enqueue(event);
+          }
+
+          return;
+        }
+
+        const { done, value } = await reader.read();
+
+        if (done) {
+          if (buffer.trim().length > 0) {
+            const event = parseAdvisorStreamChunk(buffer);
+            if (event) {
+              controller.enqueue(event);
+            }
+          }
+
+          controller.close();
+          return;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+      }
+    }
+  });
+}
+
+function parseAdvisorStreamChunk(chunk: string): AdvisorStreamEvent | null {
+  const lines = chunk
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const eventLine = lines.find((line) => line.startsWith("event:"));
+  const dataLine = lines.find((line) => line.startsWith("data:"));
+
+  if (!eventLine || !dataLine) {
+    return null;
+  }
+
+  const event = eventLine.slice("event:".length).trim();
+  const data = JSON.parse(dataLine.slice("data:".length).trim()) as unknown;
+
+  switch (event) {
+    case "status":
+      return {
+        event: "status",
+        data: {
+          stage: String((data as { stage?: unknown }).stage ?? "unknown")
+        }
+      };
+    case "answer":
+      return {
+        event: "answer",
+        data: advisorAnswerSchema.parse(data)
+      };
+    case "done":
+      return {
+        event: "done",
+        data: {
+          ok: Boolean((data as { ok?: unknown }).ok)
+        }
+      };
+    case "error":
+      return {
+        event: "error",
+        data: {
+          message: String((data as { message?: unknown }).message ?? "Request failed."),
+          code: String((data as { code?: unknown }).code ?? "INTERNAL_ERROR")
+        }
+      };
+    default:
+      return null;
+  }
+}

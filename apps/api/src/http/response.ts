@@ -27,3 +27,20 @@ export function sendError(response: ServerResponse, error: unknown): void {
     }
   });
 }
+
+export function beginEventStream(response: ServerResponse): void {
+  response.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive"
+  });
+}
+
+export function sendEventStreamMessage(
+  response: ServerResponse,
+  event: string,
+  data: unknown
+): void {
+  response.write(`event: ${event}\n`);
+  response.write(`data: ${JSON.stringify(data)}\n\n`);
+}
