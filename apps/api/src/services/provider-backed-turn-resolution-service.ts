@@ -42,6 +42,7 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
     const prepared = this.prepareTurnContext(input);
     const rawArtifacts = await this.provider.generateTurnArtifacts({
       ...input,
+      targetGameLength: input.game.sessionConfig.targetGameLength,
       ...prepared
     });
     const artifacts = turnGenerationArtifactsSchema.parse(rawArtifacts);

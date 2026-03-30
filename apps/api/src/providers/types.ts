@@ -5,6 +5,7 @@ import type {
   PrivatePlayerState,
   PublicGameState,
   ScenarioDefinition,
+  TargetGameLength,
   TurnAction,
   TurnGenerationArtifacts
 } from "@wargame/shared";
@@ -13,6 +14,7 @@ import type { AdvisorVisibleContext } from "../repositories/contracts.js";
 export type TurnGenerationProviderInput = {
   game: Game;
   scenario: ScenarioDefinition;
+  targetGameLength: TargetGameLength;
   action: TurnAction;
   actingPlayer: Game["players"][number];
   actingPrivateState: PrivatePlayerState;
@@ -41,6 +43,7 @@ export interface BotDecisionProvider {
 
 export type AdvisorResponseProviderInput = {
   scenario: ScenarioDefinition;
+  targetGameLength: TargetGameLength;
   question: string;
   context: AdvisorVisibleContext;
 };

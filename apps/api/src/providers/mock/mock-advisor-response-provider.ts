@@ -36,6 +36,12 @@ export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
     let confidenceLabel: "low" | "medium" | "high" | "uncertain" = "medium";
     let summary =
       "Visible state suggests caution: the crisis is active, but there is still room to shape the next move.";
+    const pacingAssumption =
+      input.targetGameLength === "short"
+        ? "Session pacing target is short, so visible recommendations should favor decisive progress without assuming automatic ending conditions."
+        : input.targetGameLength === "long"
+          ? "Session pacing target is long, so visible recommendations should preserve flexibility for a slower-burn crisis."
+          : "Session pacing target is medium, so visible recommendations should balance progress with restraint.";
 
     if (asksAboutRisk) {
       shortAnswer =
@@ -104,6 +110,7 @@ export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
       ],
       assumptions: [
         `Scenario context: ${input.scenario.title}`,
+        pacingAssumption,
         "No hidden intelligence or external LLM call has been used in this placeholder implementation."
       ],
       metadata: {

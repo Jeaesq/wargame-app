@@ -15,6 +15,7 @@ export class ProviderBackedAdvisorService implements AdvisorService {
   async generateAdvisorAnswer(input: GenerateAdvisorAnswerInput) {
     const rawResponse = await this.provider.generateAdvisorResponse({
       scenario: input.scenario,
+      targetGameLength: input.targetGameLength,
       question: input.question,
       context: input.context
     });

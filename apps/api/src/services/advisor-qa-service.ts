@@ -46,6 +46,7 @@ export class AdvisorQaService {
 
     const answer = await this.advisorService.generateAdvisorAnswer({
       scenario,
+      targetGameLength: game.sessionConfig.targetGameLength,
       question: input.question,
       context
     });

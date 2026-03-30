@@ -124,6 +124,7 @@ test("OpenAI advisor provider returns validated OpenAI output", async () => {
 
   const response = await provider.generateAdvisorResponse({
     scenario,
+    targetGameLength: "medium",
     question: "What should we do next?",
     context
   });
@@ -169,6 +170,7 @@ test("OpenAI advisor provider falls back to mock output on provider errors", asy
 
   const response = await provider.generateAdvisorResponse({
     scenario,
+    targetGameLength: "medium",
     question: "How risky is this?",
     context
   });
@@ -212,6 +214,7 @@ test("OpenAI advisor provider falls back to mock output on invalid structured ou
 
   const response = await provider.generateAdvisorResponse({
     scenario,
+    targetGameLength: "medium",
     question: "What should we do next?",
     context
   });

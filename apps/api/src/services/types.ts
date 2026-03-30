@@ -2,6 +2,7 @@ import type {
   AdvisorAnswer,
   Game,
   ScenarioDefinition,
+  TargetGameLength,
   TurnAction,
   TurnResolution
 } from "@wargame/shared";
@@ -39,6 +40,7 @@ export interface BotStrategyService {
 
 export type GenerateAdvisorAnswerInput = {
   scenario: ScenarioDefinition;
+  targetGameLength: TargetGameLength;
   question: string;
   context: AdvisorVisibleContext;
 };

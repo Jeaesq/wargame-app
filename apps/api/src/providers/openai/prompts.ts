@@ -21,6 +21,15 @@ export function buildOpenAITurnGenerationPrompt(
           title: input.scenario.title,
           historicalFrame: input.scenario.historicalFrame
         },
+        pacingGuidance: {
+          targetGameLength: input.targetGameLength,
+          guidance:
+            input.targetGameLength === "short"
+              ? "Favor brisk escalation and concise consequences so the crisis advances quickly."
+              : input.targetGameLength === "long"
+                ? "Favor measured pacing, layered consequences, and room for follow-on turns."
+                : "Favor balanced pacing with meaningful movement but without rushing the crisis."
+        },
         turn: {
           currentTurnNumber: input.game.turnNumber,
           nextTurnNumber: input.nextTurnNumber
@@ -85,6 +94,15 @@ export function buildOpenAIAdvisorPrompt(
           title: input.scenario.title,
           historicalFrame: input.scenario.historicalFrame
         },
+        pacingGuidance: {
+          targetGameLength: input.targetGameLength,
+          guidance:
+            input.targetGameLength === "short"
+              ? "Prefer recommendations that help the player make decisive progress soon, while staying within visible evidence."
+              : input.targetGameLength === "long"
+                ? "Prefer recommendations that preserve flexibility and acknowledge a slower-burn crisis arc."
+                : "Prefer balanced recommendations that move the crisis forward without assuming an immediate endgame."
+        },
         question: input.question,
         visibleState: {
           turnNumber: input.context.turnNumber,
@@ -105,6 +123,7 @@ export function buildOpenAIAdvisorPrompt(
         },
         rules: [
           "Do not mention hidden information.",
+          "Treat targetGameLength as pacing guidance, not as a strict turn cap or guaranteed ending.",
           "Recommendation percentages are advisory, not certain.",
           "Keep the answer practical and short.",
           "Use recommendedOptionIds only for option ids that appear in visibleOptions.",
