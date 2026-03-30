@@ -33,6 +33,27 @@ function clampPercentage(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
+function sanitizePrivateSummaries(input: {
+  privateSummaries: ResolveTurnResult["resolution"]["privateSummaries"];
+  actingPlayerId: string;
+  actingFactionId: string;
+}) {
+  return input.privateSummaries.filter(
+    (summary) =>
+      summary.factionId === input.actingFactionId &&
+      (summary.playerId === null || summary.playerId === input.actingPlayerId)
+  );
+}
+
+function sanitizeNarrativePrivateUpdates(input: {
+  privateUpdates: ResolveTurnResult["resolution"]["llmNarrative"]["privateUpdates"];
+  actingFactionId: string;
+}) {
+  return input.privateUpdates.filter(
+    (update) => update.factionId === input.actingFactionId
+  );
+}
+
 export class ProviderBackedTurnResolutionService implements TurnResolutionService {
   constructor(
     private readonly provider: TurnGenerationProvider,
@@ -49,6 +70,15 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
     const artifacts = turnGenerationArtifactsSchema.parse(rawArtifacts);
     const recommendedNextOptionIds = artifacts.recommendedNextOptionIds ?? [];
     const worldUpdateSuggestions = artifacts.worldUpdateSuggestions ?? [];
+    const privateSummaries = sanitizePrivateSummaries({
+      privateSummaries: artifacts.privateSummaries,
+      actingPlayerId: prepared.actingPlayer.id,
+      actingFactionId: input.action.factionId
+    });
+    const narrativePrivateUpdates = sanitizeNarrativePrivateUpdates({
+      privateUpdates: artifacts.llmNarrative.privateUpdates,
+      actingFactionId: input.action.factionId
+    });
     const validatedRecommendedNextOptionIds = prepared.nextOptions
       .map((candidate) => candidate.id)
       .filter((optionId) => recommendedNextOptionIds.includes(optionId));
@@ -79,7 +109,7 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
         recommendationPercent: prepared.selectedOption.recommendationPercent ?? null
       },
       publicSummary: artifacts.publicSummary,
-      privateSummaries: artifacts.privateSummaries,
+      privateSummaries,
       effects: artifacts.effects,
       stateChanges: [
         {
@@ -106,7 +136,10 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
       escalated: prepared.tensionDelta >= 10,
       recommendationLabels: artifacts.recommendationLabels,
       riskLabels: artifacts.riskLabels,
-      llmNarrative: artifacts.llmNarrative,
+      llmNarrative: {
+        ...artifacts.llmNarrative,
+        privateUpdates: narrativePrivateUpdates
+      },
       resolvedAt: prepared.resolvedAt,
       metadata: {
         ...artifacts.metadata,
