@@ -83,21 +83,27 @@ export function buildOpenAITurnGenerationPrompt(
         nextTurnNumber: input.nextTurnNumber
       },
       publicState: {
-        headline: input.game.state.public.headline,
-        publicNarrative: input.game.state.public.publicNarrative,
-        worldTension: input.game.state.public.worldTension,
+        headline: input.publicView.state.public.headline,
+        publicNarrative: input.publicView.state.public.publicNarrative,
+        worldTension: input.publicView.state.public.worldTension,
         nextWorldTension: input.nextWorldTension,
-        visibleTracks: input.game.state.public.visibleTracks,
-        publicFlags: input.game.state.public.publicFlags,
-        revealedEvents: input.game.state.public.revealedEvents
+        visibleTracks: input.publicView.state.public.visibleTracks,
+        publicFlags: input.publicView.state.public.publicFlags,
+        revealedEvents: input.publicView.state.public.revealedEvents
       },
       authorizedPrivateContext: {
         playerId: input.actingPlayer.id,
         playerName: input.actingPlayer.name,
-        factionId: input.actingPrivateState.factionId,
-        privateBriefing: input.actingPrivateState.privateBriefing,
-        intelligence: input.actingPrivateState.intelligence,
-        secretFlags: input.actingPrivateState.secretFlags
+        factionId: input.actingFactionView.state.privateByPlayer[0]?.factionId ?? input.actingPrivateState.factionId,
+        privateBriefing:
+          input.actingFactionView.state.privateByPlayer[0]?.privateBriefing ??
+          input.actingPrivateState.privateBriefing,
+        intelligence:
+          input.actingFactionView.state.privateByPlayer[0]?.intelligence ??
+          input.actingPrivateState.intelligence,
+        secretFlags:
+          input.actingFactionView.state.privateByPlayer[0]?.secretFlags ??
+          input.actingPrivateState.secretFlags
       },
       selectedAction: {
         optionId: input.selectedOption.id,

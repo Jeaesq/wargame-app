@@ -207,6 +207,14 @@ test("advisor prompt includes explicit visibility and evidence boundaries", () =
 test("turn prompt includes authorized private context and stable next-option constraints", () => {
   const prompt = buildOpenAITurnGenerationPrompt({
     game,
+    publicView: {
+      ...game,
+      state: {
+        ...game.state,
+        privateByPlayer: []
+      }
+    },
+    actingFactionView: game,
     scenario,
     targetGameLength: "medium",
     action,

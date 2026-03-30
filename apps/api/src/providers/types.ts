@@ -13,6 +13,8 @@ import type { AdvisorVisibleContext } from "../repositories/contracts.js";
 
 export type TurnGenerationProviderInput = {
   game: Game;
+  publicView: Game;
+  actingFactionView: Game;
   scenario: ScenarioDefinition;
   targetGameLength: TargetGameLength;
   action: TurnAction;

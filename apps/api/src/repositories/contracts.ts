@@ -6,6 +6,12 @@ import type {
   TurnResolution
 } from "@wargame/shared";
 
+export type SessionViewSelection = {
+  playerId?: string;
+  factionId?: string | null;
+  view?: "default" | "public" | "faction" | "system";
+};
+
 export interface GameSessionRepository {
   listSessions(): Promise<Game[]>;
   getSessionById(sessionId: string): Promise<Game | null>;
@@ -23,10 +29,11 @@ export interface ScenarioRepository {
 }
 
 export interface SessionViewRepository {
-  getSessionForPlayerView(input: {
-    sessionId: string;
-    playerId?: string;
-  }): Promise<Game | null>;
+  getSessionForPlayerView(
+    input: SessionViewSelection & {
+      sessionId: string;
+    }
+  ): Promise<Game | null>;
 }
 
 export type AdvisorVisibleContext = {

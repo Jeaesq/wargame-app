@@ -162,7 +162,6 @@ export function createApiServices(config: AppConfig = getAppConfig()): ApiServic
     ),
     turnSubmissionService: new TurnSubmissionService(
       gameSessionRepository,
-      sessionViewRepository,
       scenarioRepository,
       turnRepository,
       turnResolutionService,

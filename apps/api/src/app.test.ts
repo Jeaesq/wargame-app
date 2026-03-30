@@ -52,6 +52,34 @@ async function createSoloGame() {
   };
 }
 
+async function createHeadToHeadGame() {
+  const services = createServices();
+  const createPayload: CreateGameRequest = {
+    scenarioId: "scenario-cold-war-berlin-mvp",
+    mode: "head_to_head",
+    targetGameLength: "medium",
+    players: [
+      {
+        name: "Player USA",
+        role: "human",
+        factionId: "faction-usa"
+      },
+      {
+        name: "Player USSR",
+        role: "human",
+        factionId: "faction-ussr"
+      }
+    ]
+  };
+
+  const game = await services.gameSessionService.createSession(createPayload);
+
+  return {
+    services,
+    game: gameSchema.parse(game)
+  };
+}
+
 test("create session and load session overview", async () => {
   const { services, game: createdGame } = await createSoloGame();
 
@@ -61,6 +89,7 @@ test("create session and load session overview", async () => {
 
   const listedGames = await services.gameSessionService.listSessions();
   assert.equal(listedGames.length, 1);
+  assert.equal(listedGames[0]?.state.privateByPlayer.length, 0);
 
   const loadedGame = await services.gameSessionService.getSession(createdGame.id);
 
@@ -72,6 +101,27 @@ test("create session and load session overview", async () => {
     ),
     true
   );
+});
+
+test("session retrieval projects public and faction-private views explicitly", async () => {
+  const { services, game } = await createHeadToHeadGame();
+  const usaPlayer = game.players.find((player) => player.factionId === "faction-usa");
+  assert.ok(usaPlayer);
+
+  const defaultView = await services.gameSessionService.getSession(game.id);
+  assert.equal(defaultView.state.privateByPlayer.length, 0);
+  assert.equal(defaultView.state.derived.legalActionIds.length, 0);
+  assert.equal(defaultView.advisorAnswers.length, 0);
+
+  const usaView = await services.gameSessionService.getSession(game.id, {
+    playerId: usaPlayer.id,
+    factionId: usaPlayer.factionId
+  });
+
+  assert.equal(usaView.state.privateByPlayer.length, 1);
+  assert.equal(usaView.state.privateByPlayer[0]?.factionId, "faction-usa");
+  assert.ok(usaView.state.privateByPlayer[0]?.availableOptions.length);
+  assert.ok(usaView.state.derived.legalActionIds.length > 0);
 });
 
 test("submit turn persists human and bot resolutions and updates canonical state", async () => {
@@ -137,4 +187,24 @@ test("advisor flow returns a validated visible-state answer contract", async () 
   assert.ok(answer.shortAnswer.length > 0);
   assert.ok(answer.rationale.length >= 1);
   assert.match(answer.metadata.provider as string, /advisor/i);
+});
+
+test("advisor flow uses faction-visible state when multiple human factions exist", async () => {
+  const { services, game } = await createHeadToHeadGame();
+  const ussrPlayer = game.players.find((player) => player.factionId === "faction-ussr");
+  assert.ok(ussrPlayer);
+
+  const answer = advisorAnswerSchema.parse(
+    await services.advisorQaService.askQuestion({
+      sessionId: game.id,
+      playerId: ussrPlayer.id,
+      factionId: ussrPlayer.factionId,
+      question: "What should we do next?"
+    })
+  );
+
+  assert.equal(answer.perspectiveFactionId, "faction-ussr");
+  assert.ok(
+    answer.recommendedOptionIds.every((optionId) => optionId.startsWith("option-ussr"))
+  );
 });

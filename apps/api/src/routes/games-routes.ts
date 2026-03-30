@@ -34,8 +34,11 @@ export function registerGameRoutes(router: Router): void {
     );
   });
 
-  router.register("GET", "/games/:gameId", async ({ params, response, services }) => {
-    const game = await services.gameSessionService.getSession(params.gameId);
+  router.register("GET", "/games/:gameId", async ({ params, response, services, url }) => {
+    const game = await services.gameSessionService.getSession(params.gameId, {
+      playerId: url.searchParams.get("playerId") || undefined,
+      factionId: url.searchParams.get("factionId") || undefined
+    });
 
     sendJson(response, 200, gameSchema.parse(game));
   });

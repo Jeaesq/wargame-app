@@ -10,9 +10,9 @@ import { NotFoundError, ValidationError } from "../errors/app-error.js";
 import type {
   GameSessionRepository,
   ScenarioRepository,
-  SessionViewRepository,
   TurnRepository
 } from "../repositories/contracts.js";
+import { projectSessionForSelection } from "../repositories/session-visibility-projection.js";
 import type {
   BotStrategyService,
   TurnResolutionService
@@ -21,7 +21,6 @@ import type {
 export class TurnSubmissionService {
   constructor(
     private readonly gameSessionRepository: GameSessionRepository,
-    private readonly sessionViewRepository: SessionViewRepository,
     private readonly scenarioRepository: ScenarioRepository,
     private readonly turnRepository: TurnRepository,
     private readonly turnResolutionService: TurnResolutionService,
@@ -38,10 +37,7 @@ export class TurnSubmissionService {
     resolution: TurnResolution;
     followupResolutions: TurnResolution[];
   }> {
-    const game = await this.sessionViewRepository.getSessionForPlayerView({
-      sessionId,
-      playerId: input.playerId
-    });
+    const game = await this.gameSessionRepository.getSessionById(sessionId);
 
     if (!game) {
       throw new NotFoundError(`Game ${sessionId} was not found.`);
@@ -145,8 +141,14 @@ export class TurnSubmissionService {
       await this.turnRepository.appendTurn(currentGame.id, followupResolution);
     }
 
+    const projectedGame = projectSessionForSelection(currentGame, {
+      playerId: input.playerId,
+      factionId: input.factionId,
+      view: "faction"
+    });
+
     return {
-      game: currentGame,
+      game: projectedGame,
       resolution: turnResolutionSchema.parse(result.resolution),
       followupResolutions
     };

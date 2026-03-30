@@ -283,3 +283,62 @@ test("turn resolution service keeps private artifacts scoped to the acting facti
   ]);
   assert.deepEqual(result.updatedGame.state.derived.recommendedActionIds, ["option-2"]);
 });
+
+test("turn resolution provider receives canonical and projected visibility views", async () => {
+  let receivedInput:
+    | {
+        gamePrivateStateCount: number;
+        publicViewPrivateStateCount: number;
+        actingFactionViewPrivateStateCount: number;
+        actingFactionViewFactionId: string | null;
+      }
+    | undefined;
+
+  const service = new ProviderBackedTurnResolutionService(
+    {
+      async generateTurnArtifacts(input) {
+        receivedInput = {
+          gamePrivateStateCount: input.game.state.privateByPlayer.length,
+          publicViewPrivateStateCount: input.publicView.state.privateByPlayer.length,
+          actingFactionViewPrivateStateCount:
+            input.actingFactionView.state.privateByPlayer.length,
+          actingFactionViewFactionId:
+            input.actingFactionView.state.privateByPlayer[0]?.factionId ?? null
+        };
+
+        return {
+          publicSummary: "The airlift expands and pressure rises.",
+          privateSummaries: [],
+          effects: ["option:option-1", "world_tension:+4"],
+          recommendationLabels: ["measured"],
+          riskLabels: ["medium-escalation-risk"],
+          recommendedNextOptionIds: ["option-2"],
+          worldUpdateSuggestions: [],
+          llmNarrative: {
+            headline: "Turn 1: Expand the airlift",
+            publicSummary: "Berlin pressure intensifies without direct military engagement.",
+            privateUpdates: [],
+            consequenceTags: ["diplomatic"],
+            followupHooks: ["next-turn-options"],
+            metadata: {}
+          },
+          metadata: {}
+        };
+      }
+    },
+    () => "1948-06-24T00:00:00.000Z"
+  );
+
+  await service.resolveTurn({
+    game,
+    scenario,
+    action
+  });
+
+  assert.deepEqual(receivedInput, {
+    gamePrivateStateCount: 2,
+    publicViewPrivateStateCount: 0,
+    actingFactionViewPrivateStateCount: 1,
+    actingFactionViewFactionId: "faction-usa"
+  });
+});

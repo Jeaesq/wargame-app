@@ -179,6 +179,14 @@ const nextOptions = [
 
 const turnProviderInput: TurnGenerationProviderInput = {
   game,
+  publicView: {
+    ...game,
+    state: {
+      ...game.state,
+      privateByPlayer: []
+    }
+  },
+  actingFactionView: game,
   scenario,
   targetGameLength: "medium",
   action,

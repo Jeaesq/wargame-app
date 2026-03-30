@@ -3,8 +3,10 @@ import { NotFoundError } from "../errors/app-error.js";
 import type {
   GameSessionRepository,
   ScenarioRepository,
-  SessionViewRepository
+  SessionViewRepository,
+  SessionViewSelection
 } from "../repositories/contracts.js";
+import { projectSessionForSelection } from "../repositories/session-visibility-projection.js";
 import { buildGameFromScenario } from "./game-factory.js";
 
 export class GameSessionService {
@@ -16,13 +18,20 @@ export class GameSessionService {
   ) {}
 
   async listSessions(): Promise<Game[]> {
-    return this.gameSessionRepository.listSessions();
+    const sessions = await this.gameSessionRepository.listSessions();
+
+    return sessions.map((session) =>
+      gameSchema.parse(projectSessionForSelection(session, { view: "public" }))
+    );
   }
 
-  async getSession(sessionId: string, playerId?: string): Promise<Game> {
+  async getSession(
+    sessionId: string,
+    selection: SessionViewSelection = {}
+  ): Promise<Game> {
     const session = await this.sessionViewRepository.getSessionForPlayerView({
       sessionId,
-      playerId
+      ...selection
     });
 
     if (!session) {
@@ -49,6 +58,6 @@ export class GameSessionService {
 
     await this.gameSessionRepository.saveSession(session);
 
-    return gameSchema.parse(session);
+    return gameSchema.parse(projectSessionForSelection(session));
   }
 }

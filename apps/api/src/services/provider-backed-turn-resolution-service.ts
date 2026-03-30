@@ -11,6 +11,7 @@ import { randomUUID } from "node:crypto";
 import { ValidationError } from "../errors/app-error.js";
 import { logInfo } from "../logger.js";
 import type { TurnGenerationProvider } from "../providers/types.js";
+import { projectSessionForSelection } from "../repositories/session-visibility-projection.js";
 import type {
   ResolveTurnInput,
   ResolveTurnResult,
@@ -62,8 +63,18 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
 
   async resolveTurn(input: ResolveTurnInput): Promise<ResolveTurnResult> {
     const prepared = this.prepareTurnContext(input);
+    const publicView = projectSessionForSelection(input.game, {
+      view: "public"
+    });
+    const actingFactionView = projectSessionForSelection(input.game, {
+      playerId: input.action.playerId,
+      factionId: input.action.factionId,
+      view: "faction"
+    });
     const rawArtifacts = await this.provider.generateTurnArtifacts({
       ...input,
+      publicView,
+      actingFactionView,
       targetGameLength: input.game.sessionConfig.targetGameLength,
       ...prepared
     });

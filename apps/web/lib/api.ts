@@ -59,8 +59,26 @@ export async function getGames(): Promise<Game[]> {
   return response.games.map((game) => gameSchema.parse(game));
 }
 
-export async function getGame(gameId: string): Promise<Game> {
-  return apiRequest(`/games/${gameId}`, { method: "GET" }, gameSchema);
+export async function getGame(
+  gameId: string,
+  input?: {
+    playerId?: string;
+    factionId?: string | null;
+  }
+): Promise<Game> {
+  const query = new URLSearchParams();
+
+  if (input?.playerId) {
+    query.set("playerId", input.playerId);
+  }
+
+  if (input?.factionId) {
+    query.set("factionId", input.factionId);
+  }
+
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+
+  return apiRequest(`/games/${gameId}${suffix}`, { method: "GET" }, gameSchema);
 }
 
 export async function getTurnHistory(gameId: string): Promise<TurnResolution[]> {
