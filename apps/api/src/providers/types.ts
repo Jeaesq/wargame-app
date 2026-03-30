@@ -23,6 +23,7 @@ export type TurnGenerationProviderInput = {
   nextTurnNumber: number;
   tensionDelta: number;
   nextWorldTension: number;
+  nextOptions: ChoiceOption[];
 };
 
 export interface TurnGenerationProvider {

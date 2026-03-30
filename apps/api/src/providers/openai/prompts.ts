@@ -34,6 +34,16 @@ export function buildOpenAITurnGenerationPrompt(
           currentTurnNumber: input.game.turnNumber,
           nextTurnNumber: input.nextTurnNumber
         },
+        nextTurnContext: {
+          nextFactionId: input.nextFactionId,
+          visibleNextOptions: input.nextOptions.map((candidate) => ({
+            id: candidate.id,
+            title: candidate.title,
+            summary: candidate.summary,
+            kind: candidate.kind,
+            recommendationPercent: candidate.recommendationPercent
+          }))
+        },
         publicState: {
           headline: input.game.state.public.headline,
           publicNarrative: input.game.state.public.publicNarrative,
@@ -58,7 +68,9 @@ export function buildOpenAITurnGenerationPrompt(
         rules: [
           "Use only the supplied state and outcome context.",
           "Do not add hidden facts that contradict the provided data.",
-          "Keep summaries concise and gameplay-usable."
+          "Keep summaries concise and gameplay-usable.",
+          "recommendedNextOptionIds must only contain ids from visibleNextOptions.",
+          "worldUpdateSuggestions are advisory proposals only and must not assume they automatically become canonical state."
         ]
       },
       null,

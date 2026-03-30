@@ -32,6 +32,20 @@ export class MockTurnGenerationProvider implements TurnGenerationProvider {
           : tensionDelta >= 7
             ? ["medium-escalation-risk"]
             : ["measured-risk"],
+      recommendedNextOptionIds: input.nextOptions
+        .filter((candidate) => (candidate.recommendationPercent ?? 0) >= 60)
+        .map((candidate) => candidate.id),
+      worldUpdateSuggestions: [
+        {
+          key: "worldTension",
+          direction: tensionDelta >= 10 ? "increase" : "hold",
+          magnitude: tensionDelta >= 10 ? "high" : "low",
+          rationale:
+            tensionDelta >= 10
+              ? "The selected action is visibly escalatory."
+              : "The selected action alters pressure without a dramatic public jump."
+        }
+      ],
       llmNarrative: {
         headline: `Turn ${game.turnNumber}: ${selectedOption.title}`,
         publicSummary:

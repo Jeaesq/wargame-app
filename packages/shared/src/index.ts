@@ -192,6 +192,13 @@ export const llmNarrativeUpdateSchema = z.object({
   metadata: metadataSchema
 });
 
+export const worldUpdateSuggestionSchema = z.object({
+  key: z.enum(["worldTension", "escalationRiskPercent"]),
+  direction: z.enum(["increase", "decrease", "hold"]),
+  magnitude: z.enum(["low", "medium", "high"]),
+  rationale: z.string().min(1)
+});
+
 export const privateTurnSummarySchema = z.object({
   playerId: z.string().min(1).nullable().default(null),
   factionId: z.string().min(1),
@@ -205,6 +212,8 @@ export const turnGenerationArtifactsSchema = z.object({
   effects: z.array(z.string()).default([]),
   recommendationLabels: tagsSchema,
   riskLabels: tagsSchema,
+  recommendedNextOptionIds: z.array(z.string()).default([]),
+  worldUpdateSuggestions: z.array(worldUpdateSuggestionSchema).default([]),
   llmNarrative: llmNarrativeUpdateSchema,
   metadata: metadataSchema
 });
@@ -407,6 +416,7 @@ export type AdvisorAnswer = z.infer<typeof advisorAnswerSchema>;
 export type ScenarioDefinition = z.infer<typeof scenarioDefinitionSchema>;
 export type ChoiceOption = z.infer<typeof choiceOptionSchema>;
 export type TurnGenerationArtifacts = z.infer<typeof turnGenerationArtifactsSchema>;
+export type WorldUpdateSuggestion = z.infer<typeof worldUpdateSuggestionSchema>;
 export type BotDecisionPayload = z.infer<typeof botDecisionPayloadSchema>;
 export type AdvisorResponsePayload = z.infer<typeof advisorResponsePayloadSchema>;
 export type ResolvedActionSummary = z.infer<typeof resolvedActionSummarySchema>;

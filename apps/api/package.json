@@ -8,8 +8,8 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
-    "test": "node --import tsx --test src/*.test.ts",
-    "typecheck": "tsc --noEmit"
+    "test": "npm run build -w @wargame/shared && node --import tsx --test \"src/**/*.test.ts\"",
+    "typecheck": "npm run build -w @wargame/shared && tsc --noEmit"
   },
   "dependencies": {
     "@wargame/shared": "0.1.0",

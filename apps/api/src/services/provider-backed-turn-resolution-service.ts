@@ -46,6 +46,11 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
       ...prepared
     });
     const artifacts = turnGenerationArtifactsSchema.parse(rawArtifacts);
+    const recommendedNextOptionIds = artifacts.recommendedNextOptionIds ?? [];
+    const worldUpdateSuggestions = artifacts.worldUpdateSuggestions ?? [];
+    const validatedRecommendedNextOptionIds = prepared.nextOptions
+      .map((candidate) => candidate.id)
+      .filter((optionId) => recommendedNextOptionIds.includes(optionId));
 
     const escalationRisk = clampPercentage(
       input.game.state.derived.escalationRiskPercent +
@@ -104,6 +109,8 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
       resolvedAt: prepared.resolvedAt,
       metadata: {
         ...artifacts.metadata,
+        turnProviderRecommendedNextOptionIds: validatedRecommendedNextOptionIds,
+        worldUpdateSuggestions,
         integrationReady: "provider-turn-generation"
       }
     });
@@ -113,6 +120,7 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
       scenario: input.scenario,
       actionFactionId: input.action.factionId,
       prepared,
+      recommendedNextOptionIds: validatedRecommendedNextOptionIds,
       escalationRisk,
       resolution
     });
@@ -182,6 +190,7 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
     scenario: ResolveTurnInput["scenario"];
     actionFactionId: string;
     prepared: PreparedTurnContext;
+    recommendedNextOptionIds: string[];
     escalationRisk: number;
     resolution: ResolveTurnResult["resolution"];
   }): Game {
@@ -229,9 +238,12 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
             .filter((player) => player.factionId === prepared.nextFactionId)
             .map((player) => player.id),
           legalActionIds: prepared.nextOptions.map((candidate) => candidate.id),
-          recommendedActionIds: prepared.nextOptions
-            .filter((candidate) => (candidate.recommendationPercent ?? 0) >= 60)
-            .map((candidate) => candidate.id),
+          recommendedActionIds:
+            input.recommendedNextOptionIds.length > 0
+              ? input.recommendedNextOptionIds
+              : prepared.nextOptions
+                  .filter((candidate) => (candidate.recommendationPercent ?? 0) >= 60)
+                  .map((candidate) => candidate.id),
           escalationRiskPercent: input.escalationRisk,
           warnings: resolution.escalated
             ? [

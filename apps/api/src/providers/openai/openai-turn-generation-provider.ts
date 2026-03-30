@@ -1,15 +1,19 @@
 import type { TurnGenerationProvider, TurnGenerationProviderInput } from "../types.js";
 import { ProviderInvocationError } from "../../errors/app-error.js";
 import { logError, logInfo } from "../../logger.js";
+import { MockTurnGenerationProvider } from "../mock/mock-turn-generation-provider.js";
 import { turnGenerationArtifactsJsonSchema } from "./json-schemas.js";
 import { mapOpenAITurnGenerationOutput } from "./mappers.js";
 import { buildOpenAITurnGenerationPrompt } from "./prompts.js";
 import { OpenAIResponsesClient } from "./response-client.js";
 
-// Skeleton only: this is the future real-provider seam for Responses API integration.
-// It is intentionally not production-complete and is not the default runtime path.
+type StructuredOutputClient = Pick<OpenAIResponsesClient, "requestStructuredOutput">;
+
 export class OpenAITurnGenerationProvider implements TurnGenerationProvider {
-  constructor(private readonly client: OpenAIResponsesClient) {}
+  constructor(
+    private readonly client: StructuredOutputClient,
+    private readonly fallbackProvider: TurnGenerationProvider = new MockTurnGenerationProvider()
+  ) {}
 
   async generateTurnArtifacts(input: TurnGenerationProviderInput): Promise<unknown> {
     logInfo("Turn resolution provider path selected.", {
@@ -38,7 +42,8 @@ export class OpenAITurnGenerationProvider implements TurnGenerationProvider {
         details:
           error instanceof ProviderInvocationError ? error.details : undefined
       });
-      throw error;
+
+      return this.fallbackProvider.generateTurnArtifacts(input);
     }
   }
 }
