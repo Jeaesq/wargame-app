@@ -1,17 +1,16 @@
+import {
+  createStrictEmptyObjectJsonSchema,
+  createStrictObjectJsonSchema
+} from "./structured-output-schema.js";
+
 // These JSON Schemas are intentionally narrow and pragmatic.
-// They are suitable for an initial Responses API integration skeleton,
-// but they are not yet production-complete contracts.
+// They are suitable for an initial Responses API integration seam
+// and are constructed with strict object helpers so OpenAI Structured Outputs
+// compatibility is explicit at every object node.
 
-const strictEmptyObjectJsonSchema = {
-  type: "object",
-  additionalProperties: false,
-  properties: {},
-  required: []
-} as const;
+const strictEmptyObjectJsonSchema = createStrictEmptyObjectJsonSchema();
 
-export const turnGenerationArtifactsJsonSchema = {
-  type: "object",
-  additionalProperties: false,
+export const turnGenerationArtifactsJsonSchema = createStrictObjectJsonSchema({
   required: [
     "publicSummary",
     "privateSummaries",
@@ -25,9 +24,7 @@ export const turnGenerationArtifactsJsonSchema = {
     publicSummary: { type: "string" },
     privateSummaries: {
       type: "array",
-      items: {
-        type: "object",
-        additionalProperties: false,
+      items: createStrictObjectJsonSchema({
         required: ["playerId", "factionId", "summary", "tags"],
         properties: {
           playerId: { type: ["string", "null"] },
@@ -38,7 +35,7 @@ export const turnGenerationArtifactsJsonSchema = {
             items: { type: "string" }
           }
         }
-      }
+      })
     },
     effects: {
       type: "array",
@@ -52,9 +49,7 @@ export const turnGenerationArtifactsJsonSchema = {
       type: "array",
       items: { type: "string" }
     },
-    llmNarrative: {
-      type: "object",
-      additionalProperties: false,
+    llmNarrative: createStrictObjectJsonSchema({
       required: [
         "headline",
         "publicSummary",
@@ -68,9 +63,7 @@ export const turnGenerationArtifactsJsonSchema = {
         publicSummary: { type: "string" },
         privateUpdates: {
           type: "array",
-          items: {
-            type: "object",
-            additionalProperties: false,
+          items: createStrictObjectJsonSchema({
             required: ["factionId", "summary", "tags"],
             properties: {
               factionId: { type: "string" },
@@ -80,7 +73,7 @@ export const turnGenerationArtifactsJsonSchema = {
                 items: { type: "string" }
               }
             }
-          }
+          })
         },
         consequenceTags: {
           type: "array",
@@ -90,20 +83,14 @@ export const turnGenerationArtifactsJsonSchema = {
           type: "array",
           items: { type: "string" }
         },
-        metadata: {
-          ...strictEmptyObjectJsonSchema
-        }
+        metadata: strictEmptyObjectJsonSchema
       }
-    },
-    metadata: {
-      ...strictEmptyObjectJsonSchema
-    }
+    }),
+    metadata: strictEmptyObjectJsonSchema
   }
-} as const;
+});
 
-export const advisorResponsePayloadJsonSchema = {
-  type: "object",
-  additionalProperties: false,
+export const advisorResponsePayloadJsonSchema = createStrictObjectJsonSchema({
   required: [
     "summary",
     "shortAnswer",
@@ -144,21 +131,15 @@ export const advisorResponsePayloadJsonSchema = {
       type: "array",
       items: { type: "string" }
     },
-    metadata: {
-      ...strictEmptyObjectJsonSchema
-    }
+    metadata: strictEmptyObjectJsonSchema
   }
-} as const;
+});
 
-export const botDecisionPayloadJsonSchema = {
-  type: "object",
-  additionalProperties: false,
+export const botDecisionPayloadJsonSchema = createStrictObjectJsonSchema({
   required: ["optionId", "rationale", "metadata"],
   properties: {
     optionId: { type: "string" },
     rationale: { type: "string" },
-    metadata: {
-      ...strictEmptyObjectJsonSchema
-    }
+    metadata: strictEmptyObjectJsonSchema
   }
-} as const;
+});

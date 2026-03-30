@@ -1,4 +1,5 @@
 import { advisorResponsePayloadSchema } from "@wargame/shared";
+import { ZodError } from "zod";
 import { ProviderInvocationError } from "../../errors/app-error.js";
 import { logError, logInfo } from "../../logger.js";
 import { MockAdvisorResponseProvider } from "../mock/mock-advisor-response-provider.js";
@@ -44,10 +45,13 @@ export class OpenAIAdvisorResponseProvider implements AdvisorResponseProvider {
         }
       });
     } catch (error) {
+      const failure = classifyAdvisorFailure(error);
+
       logError("OpenAI advisor provider failed; falling back to mock advisor.", {
         gameId: input.context.gameId,
         turnNumber: input.context.turnNumber,
         question: input.question,
+        failureStage: failure.stage,
         reason: error instanceof Error ? error.message : "unknown",
         details:
           error instanceof ProviderInvocationError ? error.details : undefined
@@ -78,4 +82,28 @@ export class OpenAIAdvisorResponseProvider implements AdvisorResponseProvider {
       }
     });
   }
+}
+
+function classifyAdvisorFailure(error: unknown): {
+  stage: "schema_compatibility" | "provider_request" | "response_validation" | "unknown";
+} {
+  if (error instanceof ProviderInvocationError) {
+    return {
+      stage:
+        error.message ===
+        "Structured output schema is incompatible with OpenAI Responses API."
+          ? "schema_compatibility"
+          : "provider_request"
+    };
+  }
+
+  if (error instanceof ZodError) {
+    return {
+      stage: "response_validation"
+    };
+  }
+
+  return {
+    stage: "unknown"
+  };
 }

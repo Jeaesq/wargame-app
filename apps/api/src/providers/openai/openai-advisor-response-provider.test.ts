@@ -178,3 +178,46 @@ test("OpenAI advisor provider falls back to mock output on provider errors", asy
   assert.equal(metadata.fallbackProvider, "mock-advisor-response");
   assert.equal(metadata.fallbackReason, "provider_invocation_error");
 });
+
+test("OpenAI advisor provider falls back to mock output on invalid structured output", async () => {
+  const fallbackProvider: AdvisorResponseProvider = {
+    async generateAdvisorResponse() {
+      return {
+        summary: "Fallback advisor summary.",
+        shortAnswer: "Fallback advisor short answer.",
+        rationale: ["Fallback rationale."],
+        recommendationBand: "uncertain",
+        confidenceLabel: "low",
+        recommendedOptionIds: [],
+        confidencePercent: 20,
+        riskNotes: ["Fallback risk note."],
+        assumptions: ["Fallback assumption."],
+        metadata: {
+          provider: "mock-advisor-response"
+        }
+      };
+    }
+  };
+
+  const provider = new OpenAIAdvisorResponseProvider(
+    {
+      async requestStructuredOutput() {
+        return {
+          summary: "Missing required fields should trigger runtime validation."
+        };
+      }
+    },
+    fallbackProvider
+  );
+
+  const response = await provider.generateAdvisorResponse({
+    scenario,
+    question: "What should we do next?",
+    context
+  });
+
+  const metadata = (response as { metadata: Record<string, unknown> }).metadata;
+  assert.equal(metadata.provider, "openai-advisor-response-fallback");
+  assert.equal(metadata.fallbackProvider, "mock-advisor-response");
+  assert.equal(metadata.fallbackReason, "invalid_provider_output");
+});
