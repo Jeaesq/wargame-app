@@ -106,6 +106,36 @@ The backend now routes turn narration support, bot decision support, and advisor
 - the backend still owns canonical state, legal actions, validation, and persistence
 - future real LLM-backed providers can be added behind the same composition seam without changing the frontend API
 
+### Backend environment variables
+
+Required or commonly used API environment variables:
+
+- `PORT`
+  Optional locally. Cloud Run sets this automatically.
+- `PERSISTENCE_MODE=memory|postgres`
+- `DATABASE_URL`
+  Required when `PERSISTENCE_MODE=postgres`.
+- `PG_POOL_MAX`
+  Optional PostgreSQL pool size. Defaults to `10`.
+- `ADVISOR_PROVIDER=mock|openai`
+- `TURN_PROVIDER=mock|openai`
+- `BOT_PROVIDER=mock|openai`
+- `OPENAI_API_KEY`
+  Required if any provider uses `openai`.
+- `OPENAI_MODEL`
+  Required if any provider uses `openai`.
+- `OPENAI_BASE_URL`
+  Optional backend-only override. Defaults to `https://api.openai.com/v1`.
+
+Safe default local settings:
+
+```bash
+PERSISTENCE_MODE=memory
+ADVISOR_PROVIDER=mock
+TURN_PROVIDER=mock
+BOT_PROVIDER=mock
+```
+
 ### OpenAI provider setup
 
 The repository includes a server-side OpenAI provider path for the API. It is optional, non-default, and all OpenAI credentials stay on the backend only.
@@ -146,9 +176,14 @@ Notes:
 
 - if any provider is set to `openai` without `OPENAI_API_KEY` or `OPENAI_MODEL`, the API exits immediately with a clear configuration error
 - all OpenAI secrets stay server-side in `apps/api/.env.local` or the API process environment only
+- the frontend should only receive `API_BASE_URL`, never `OPENAI_API_KEY`
 - normal local development does not require OpenAI credentials
 - canonical state still remains backend-owned; the provider returns structured artifacts only
 - normal gameplay stays on mock unless you explicitly switch a provider
+
+## Cloud Run deployment
+
+For a step-by-step Cloud Run deployment guide for the API, including Secret Manager usage and advisor-on-OpenAI production settings, see [docs/cloud-run-deployment.md](/Users/joshanderson/Documents/Creative/Codex%20-%20ChatGPT%20Codex/wargame-app/docs/cloud-run-deployment.md).
 
 ## Other commands
 
