@@ -144,3 +144,10 @@ Store enough metadata to debug prompt behavior without making prompt history the
 - Keep prompt templates versioned alongside schemas
 - Assume the model may hallucinate certainty; backend copy may need to soften tone
 - Recommendation percentages shown in UI must come from backend calculations, not model guesses
+
+## Local evaluation workflow
+
+- Prompt contract tests live in `apps/api/src/providers/openai/*.test.ts`
+- Local fixture-based provider evaluations live in `apps/api/src/evals`
+- Run `npm run eval:ai` from the repo root to execute the lightweight local AI regression harness
+- Keep deterministic schema and scope checks separate from softer qualitative heuristics
