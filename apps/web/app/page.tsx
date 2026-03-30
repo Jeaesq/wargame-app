@@ -2,6 +2,12 @@ import Link from "next/link";
 import { appManifest } from "@wargame/shared";
 import { PageHeader } from "../components/page-header";
 import { getGames, getScenarios } from "../lib/api";
+import {
+  buildFactionViewHref,
+  getControlledPlayers,
+  getCurrentUserIdentity,
+  getFactionName
+} from "../lib/session-access";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +15,7 @@ export default async function HomePage() {
   const [scenarios, games] = await Promise.all([getScenarios(), getGames()]);
   const leadScenario = scenarios[0];
   const latestGame = games[games.length - 1];
+  const currentIdentity = getCurrentUserIdentity();
   const sortedGames = [...games].sort(
     (left, right) => right.updatedAt.localeCompare(left.updatedAt)
   );
@@ -49,16 +56,45 @@ export default async function HomePage() {
                 ? `Most recent game is on turn ${latestGame.turnNumber}.`
                 : "No in-memory games created yet."}
             </p>
+            <div className="inline-meta">
+              <span className="pill">Current user: {currentIdentity.displayName}</span>
+              <span className="pill">Prototype access: owner or assigned faction</span>
+            </div>
             <div className="subtle-divider" />
             <ul className="list">
               {sortedGames.length ? (
-                sortedGames.map((game) => (
-                  <li className="list-item" key={game.id}>
-                    <Link href={`/games/${game.id}`}>
-                      Turn {game.turnNumber} · {game.factions.find((faction) => faction.id === game.currentFactionId)?.name ?? "Pending"} · {game.sessionConfig.targetGameLength}
-                    </Link>
-                  </li>
-                ))
+                sortedGames.map((game) => {
+                  const controlledPlayers = getControlledPlayers(game);
+                  const selectedPlayer = controlledPlayers[0] ?? null;
+                  const href = buildFactionViewHref({
+                    pathname: `/games/${game.id}`,
+                    playerId: selectedPlayer?.id,
+                    factionId: selectedPlayer?.factionId
+                  });
+                  const activeFactionName = getFactionName(game, game.currentFactionId);
+                  const controlledFactionName = selectedPlayer
+                    ? getFactionName(game, selectedPlayer.factionId)
+                    : null;
+
+                  return (
+                    <li className="list-item" key={game.id}>
+                      <Link href={href}>
+                        Turn {game.turnNumber} · {activeFactionName} ·{" "}
+                        {game.sessionConfig.targetGameLength}
+                      </Link>
+                      <div className="inline-meta">
+                        <span className="pill">
+                          {game.ownerUserId === currentIdentity.userId ? "Owned by you" : "Shared session"}
+                        </span>
+                        <span className="pill">
+                          {controlledFactionName
+                            ? `You control ${controlledFactionName}`
+                            : "No faction assigned"}
+                        </span>
+                      </div>
+                    </li>
+                  );
+                })
               ) : (
                 <li className="list-item muted">No active sessions yet.</li>
               )}

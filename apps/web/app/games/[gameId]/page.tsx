@@ -6,8 +6,14 @@ import { PageHeader } from "../../../components/page-header";
 import { PrivateIntelligencePanel } from "../../../components/private-intelligence-panel";
 import { PublicStatePanel } from "../../../components/public-state-panel";
 import { ScenarioBriefing } from "../../../components/scenario-briefing";
+import { SessionAccessPanel } from "../../../components/session-access-panel";
 import { TurnHistory } from "../../../components/turn-history";
 import { getGame, getScenarios, getTurnHistory } from "../../../lib/api";
+import {
+  buildFactionViewHref,
+  getFactionName,
+  getSelectedPlayerView
+} from "../../../lib/session-access";
 
 export const dynamic = "force-dynamic";
 
@@ -15,11 +21,24 @@ type GameDetailPageProps = {
   params: Promise<{
     gameId: string;
   }>;
+  searchParams?: Promise<{
+    factionId?: string;
+    playerId?: string;
+  }>;
 };
 
-export default async function GameDetailPage({ params }: GameDetailPageProps) {
+export default async function GameDetailPage({
+  params,
+  searchParams
+}: GameDetailPageProps) {
   const { gameId } = await params;
-  const game = await getGame(gameId).catch(() => null);
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const selectedPlayerId = resolvedSearchParams?.playerId ?? undefined;
+  const selectedFactionId = resolvedSearchParams?.factionId ?? undefined;
+  const game = await getGame(gameId, {
+    playerId: selectedPlayerId,
+    factionId: selectedFactionId
+  }).catch(() => null);
 
   if (!game) {
     notFound();
@@ -28,12 +47,19 @@ export default async function GameDetailPage({ params }: GameDetailPageProps) {
   const [scenarios, turnHistory] = await Promise.all([getScenarios(), getTurnHistory(gameId)]);
   const scenario = scenarios.find((item) => item.id === game.scenarioId);
   const currentHumanPlayer =
+    getSelectedPlayerView(game, selectedPlayerId) ??
     game.players.find((player) => player.role === "human" && player.factionId === game.currentFactionId) ??
     game.players.find((player) => player.role === "human");
   const privateState = game.state.privateByPlayer.find(
     (state) => state.playerId === currentHumanPlayer?.id
   ) ?? null;
   const advisorAnswer = game.advisorAnswers.at(-1) ?? null;
+  const turnWorkspaceHref = buildFactionViewHref({
+    pathname: `/games/${gameId}/turn`,
+    playerId: currentHumanPlayer?.id,
+    factionId: currentHumanPlayer?.factionId
+  });
+  const currentViewName = getFactionName(game, currentHumanPlayer?.factionId);
 
   return (
     <main className="page">
@@ -41,9 +67,9 @@ export default async function GameDetailPage({ params }: GameDetailPageProps) {
         <PageHeader
           eyebrow="Game Detail"
           title={`${scenario?.title ?? "Scenario"} · Session overview`}
-          description="This page acts like the player’s command dashboard: current scenario framing, state visibility, advisor guidance, and recent turn outcomes."
+          description={`This page acts like the player’s command dashboard: current scenario framing, state visibility, advisor guidance, and recent turn outcomes. Current faction view: ${currentViewName}.`}
           actions={
-            <Link className="button" href={`/games/${gameId}/turn`}>
+            <Link className="button" href={turnWorkspaceHref}>
               Open turn workspace
             </Link>
           }
@@ -52,6 +78,11 @@ export default async function GameDetailPage({ params }: GameDetailPageProps) {
           <div className="section-stack">
             <section className="section-stack current-state-section">
               <div className="section-label">Current State</div>
+              <SessionAccessPanel
+                game={game}
+                pathname={`/games/${gameId}`}
+                selectedPlayerId={currentHumanPlayer?.id}
+              />
               <section className="panel">
                 <div className="panel__header">
                   <h2>Session Settings</h2>
