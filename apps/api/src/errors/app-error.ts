@@ -22,6 +22,12 @@ export class ValidationError extends AppError {
   }
 }
 
+export class ForbiddenError extends AppError {
+  constructor(message: string, details?: unknown) {
+    super(403, "FORBIDDEN", message, details);
+  }
+}
+
 export class ProviderInvocationError extends AppError {
   constructor(message: string, details?: unknown) {
     super(502, "PROVIDER_INVOCATION_ERROR", message, details);

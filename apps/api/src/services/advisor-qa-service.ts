@@ -1,5 +1,5 @@
 import { advisorAnswerSchema, gameSchema } from "@wargame/shared";
-import { NotFoundError } from "../errors/app-error.js";
+import { ForbiddenError, NotFoundError } from "../errors/app-error.js";
 import type {
   AdvisorContextRepository,
   GameSessionRepository,
@@ -18,6 +18,7 @@ export class AdvisorQaService {
 
   async askQuestion(input: {
     sessionId: string;
+    requestUserId: string;
     playerId?: string;
     factionId?: string | null;
     question: string;
@@ -26,6 +27,27 @@ export class AdvisorQaService {
 
     if (!game) {
       throw new NotFoundError(`Game ${input.sessionId} was not found.`);
+    }
+
+    if (
+      game.ownerUserId !== input.requestUserId &&
+      !game.players.some((player) => player.userId === input.requestUserId)
+    ) {
+      throw new ForbiddenError(
+        `User ${input.requestUserId} cannot access game ${input.sessionId}.`
+      );
+    }
+
+    if (
+      input.playerId &&
+      !game.players.some(
+        (player) =>
+          player.id === input.playerId && player.userId === input.requestUserId
+      )
+    ) {
+      throw new ForbiddenError(
+        `User ${input.requestUserId} cannot act as player ${input.playerId}.`
+      );
     }
 
     const scenario = await this.scenarioRepository.getScenarioById(game.scenarioId);

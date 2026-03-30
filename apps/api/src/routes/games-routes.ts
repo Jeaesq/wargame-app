@@ -22,8 +22,9 @@ export function registerGameRoutes(router: Router): void {
     );
   });
 
-  router.register("GET", "/games", async ({ response, services }) => {
-    const games = await services.gameSessionService.listSessions();
+  router.register("GET", "/games", async ({ request, response, services }) => {
+    const identity = services.requestIdentityService.resolveRequestIdentity(request);
+    const games = await services.gameSessionService.listSessions(identity.userId);
 
     sendJson(
       response,
@@ -34,16 +35,22 @@ export function registerGameRoutes(router: Router): void {
     );
   });
 
-  router.register("GET", "/games/:gameId", async ({ params, response, services, url }) => {
-    const game = await services.gameSessionService.getSession(params.gameId, {
+  router.register(
+    "GET",
+    "/games/:gameId",
+    async ({ params, request, response, services, url }) => {
+    const identity = services.requestIdentityService.resolveRequestIdentity(request);
+    const game = await services.gameSessionService.getSession(params.gameId, identity.userId, {
       playerId: url.searchParams.get("playerId") || undefined,
       factionId: url.searchParams.get("factionId") || undefined
     });
 
     sendJson(response, 200, gameSchema.parse(game));
-  });
+    }
+  );
 
   router.register("POST", "/games", async ({ request, response, services }) => {
+    const identity = services.requestIdentityService.resolveRequestIdentity(request);
     const body = await readJsonBody(request);
     const input = validateWithSchema(
       createGameRequestSchema,
@@ -51,7 +58,7 @@ export function registerGameRoutes(router: Router): void {
       "Game creation payload is invalid."
     );
 
-    const game = await services.gameSessionService.createSession(input);
+    const game = await services.gameSessionService.createSession(input, identity.userId);
 
     sendJson(response, 201, gameSchema.parse(game));
   });

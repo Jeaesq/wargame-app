@@ -13,6 +13,7 @@ const apiRootDirectory = path.resolve(
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   PERSISTENCE_MODE: persistenceModeSchema.default("memory"),
+  DEV_DEFAULT_USER_ID: z.string().min(1).default("local-dev-user"),
   ADVISOR_PROVIDER: providerModeSchema.optional(),
   TURN_PROVIDER: providerModeSchema.optional(),
   BOT_PROVIDER: providerModeSchema.optional(),
@@ -39,6 +40,11 @@ export type AppConfig = {
   port: number;
   persistence: {
     mode: PersistenceMode;
+  };
+  identity: {
+    userIdHeader: string;
+    userNameHeader: string;
+    defaultUserId: string;
   };
   providers: {
     advisor: ProviderMode;
@@ -228,6 +234,11 @@ export function getAppConfig(): AppConfig {
     port: env.PORT,
     persistence: {
       mode: env.PERSISTENCE_MODE
+    },
+    identity: {
+      userIdHeader: "x-wargame-user-id",
+      userNameHeader: "x-wargame-user-name",
+      defaultUserId: env.DEV_DEFAULT_USER_ID
     },
     providers: {
       advisor: env.ADVISOR_PROVIDER,

@@ -56,6 +56,7 @@ Static content that defines:
 A persisted playthrough instance tied to:
 
 - scenario id
+- owner user identity
 - player count and faction assignment
 - current turn number
 - canonical state snapshot
@@ -127,3 +128,4 @@ The MVP design should leave room for:
 - event decks, intelligence systems, and diplomacy layers
 - database-backed persistence and analytics
 - richer moderator and replay tooling
+- real user accounts and invited faction assignments replacing the current development identity shim

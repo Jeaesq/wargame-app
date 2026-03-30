@@ -9,6 +9,7 @@ import {
 const trackedEnvironmentKeys = [
   "PORT",
   "PERSISTENCE_MODE",
+  "DEV_DEFAULT_USER_ID",
   "ADVISOR_PROVIDER",
   "TURN_PROVIDER",
   "BOT_PROVIDER",
@@ -69,6 +70,7 @@ test("defaults to the mock provider when AI_PROVIDER is unset", async () => {
     assert.equal(config.providers.turn, "mock");
     assert.equal(config.providers.bot, "mock");
     assert.equal(config.providers.openai, null);
+    assert.equal(config.identity.defaultUserId, "local-dev-user");
   });
 });
 

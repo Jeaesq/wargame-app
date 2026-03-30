@@ -16,6 +16,11 @@ const testConfig: AppConfig = {
   persistence: {
     mode: "memory"
   },
+  identity: {
+    userIdHeader: "x-wargame-user-id",
+    userNameHeader: "x-wargame-user-name",
+    defaultUserId: "local-dev-user"
+  },
   providers: {
     advisor: "mock",
     turn: "mock",
@@ -28,6 +33,8 @@ const testConfig: AppConfig = {
 function createServices() {
   return createApiServices(testConfig);
 }
+
+const defaultTestUserId = "local-dev-user";
 
 async function createSoloGame() {
   const services = createServices();
@@ -44,7 +51,10 @@ async function createSoloGame() {
     ]
   };
 
-  const game = await services.gameSessionService.createSession(createPayload);
+  const game = await services.gameSessionService.createSession(
+    createPayload,
+    defaultTestUserId
+  );
 
   return {
     services,
@@ -72,7 +82,10 @@ async function createHeadToHeadGame() {
     ]
   };
 
-  const game = await services.gameSessionService.createSession(createPayload);
+  const game = await services.gameSessionService.createSession(
+    createPayload,
+    defaultTestUserId
+  );
 
   return {
     services,
@@ -84,14 +97,18 @@ test("create session and load session overview", async () => {
   const { services, game: createdGame } = await createSoloGame();
 
   assert.equal(createdGame.sessionConfig.targetGameLength, "medium");
+  assert.equal(createdGame.ownerUserId, defaultTestUserId);
   assert.equal(createdGame.turnNumber, 1);
   assert.equal(createdGame.mode, "solo");
 
-  const listedGames = await services.gameSessionService.listSessions();
+  const listedGames = await services.gameSessionService.listSessions(defaultTestUserId);
   assert.equal(listedGames.length, 1);
   assert.equal(listedGames[0]?.state.privateByPlayer.length, 0);
 
-  const loadedGame = await services.gameSessionService.getSession(createdGame.id);
+  const loadedGame = await services.gameSessionService.getSession(
+    createdGame.id,
+    defaultTestUserId
+  );
 
   assert.equal(loadedGame.id, createdGame.id);
   assert.equal(loadedGame.state.public.headline, createdGame.state.public.headline);
@@ -108,20 +125,27 @@ test("session retrieval projects public and faction-private views explicitly", a
   const usaPlayer = game.players.find((player) => player.factionId === "faction-usa");
   assert.ok(usaPlayer);
 
-  const defaultView = await services.gameSessionService.getSession(game.id);
+  const defaultView = await services.gameSessionService.getSession(
+    game.id,
+    defaultTestUserId
+  );
   assert.equal(defaultView.state.privateByPlayer.length, 0);
   assert.equal(defaultView.state.derived.legalActionIds.length, 0);
   assert.equal(defaultView.advisorAnswers.length, 0);
 
-  const usaView = await services.gameSessionService.getSession(game.id, {
-    playerId: usaPlayer.id,
-    factionId: usaPlayer.factionId
-  });
+  const usaViewWithIdentity = await services.gameSessionService.getSession(
+    game.id,
+    defaultTestUserId,
+    {
+      playerId: usaPlayer.id,
+      factionId: usaPlayer.factionId
+    }
+  );
 
-  assert.equal(usaView.state.privateByPlayer.length, 1);
-  assert.equal(usaView.state.privateByPlayer[0]?.factionId, "faction-usa");
-  assert.ok(usaView.state.privateByPlayer[0]?.availableOptions.length);
-  assert.ok(usaView.state.derived.legalActionIds.length > 0);
+  assert.equal(usaViewWithIdentity.state.privateByPlayer.length, 1);
+  assert.equal(usaViewWithIdentity.state.privateByPlayer[0]?.factionId, "faction-usa");
+  assert.ok(usaViewWithIdentity.state.privateByPlayer[0]?.availableOptions.length);
+  assert.ok(usaViewWithIdentity.state.derived.legalActionIds.length > 0);
 });
 
 test("submit turn persists human and bot resolutions and updates canonical state", async () => {
@@ -141,7 +165,11 @@ test("submit turn persists human and bot resolutions and updates canonical state
   };
 
   const submission = turnResolutionResponseSchema.parse(
-    await services.turnSubmissionService.submitTurn(createdGame.id, submitPayload)
+    await services.turnSubmissionService.submitTurn(
+      createdGame.id,
+      defaultTestUserId,
+      submitPayload
+    )
   );
 
   assert.equal(submission.resolution.actor.playerRole, "human");
@@ -160,7 +188,10 @@ test("submit turn persists human and bot resolutions and updates canonical state
   assert.equal(turnHistory.turns[1]?.actor.playerRole, "ai");
   assert.equal(turnHistory.turns[1]?.actingFactionId, "faction-ussr");
 
-  const reloadedGame = await services.gameSessionService.getSession(createdGame.id);
+  const reloadedGame = await services.gameSessionService.getSession(
+    createdGame.id,
+    defaultTestUserId
+  );
 
   assert.equal(reloadedGame.turnNumber, 3);
   assert.equal(reloadedGame.lastResolution?.actor.playerRole, "ai");
@@ -175,6 +206,7 @@ test("advisor flow returns a validated visible-state answer contract", async () 
   const answer = advisorAnswerSchema.parse(
     await services.advisorQaService.askQuestion({
       sessionId: createdGame.id,
+      requestUserId: defaultTestUserId,
       playerId: actingPlayer.id,
       factionId: actingPlayer.factionId,
       question: "What is the risk if we escalate now?"
@@ -197,6 +229,7 @@ test("advisor flow uses faction-visible state when multiple human factions exist
   const answer = advisorAnswerSchema.parse(
     await services.advisorQaService.askQuestion({
       sessionId: game.id,
+      requestUserId: defaultTestUserId,
       playerId: ussrPlayer.id,
       factionId: ussrPlayer.factionId,
       question: "What should we do next?"
@@ -206,5 +239,29 @@ test("advisor flow uses faction-visible state when multiple human factions exist
   assert.equal(answer.perspectiveFactionId, "faction-ussr");
   assert.ok(
     answer.recommendedOptionIds.every((optionId) => optionId.startsWith("option-ussr"))
+  );
+});
+
+test("session ownership restricts access to non-participant users", async () => {
+  const { services, game } = await createSoloGame();
+
+  const listedGames = await services.gameSessionService.listSessions("other-user");
+  assert.equal(listedGames.length, 0);
+
+  await assert.rejects(
+    () => services.gameSessionService.getSession(game.id, "other-user"),
+    /cannot access game/i
+  );
+
+  await assert.rejects(
+    () =>
+      services.turnSubmissionService.submitTurn(game.id, "other-user", {
+        playerId: game.players[0]!.id,
+        factionId: game.players[0]!.factionId ?? "faction-usa",
+        optionId: "option-usa-airlift",
+        parameters: {},
+        clientContext: {}
+      }),
+    /cannot access game|cannot submit turns/i
   );
 });

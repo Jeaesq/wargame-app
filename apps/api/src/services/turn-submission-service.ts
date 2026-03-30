@@ -6,7 +6,7 @@ import {
   type TurnResolution
 } from "@wargame/shared";
 import { randomUUID } from "node:crypto";
-import { NotFoundError, ValidationError } from "../errors/app-error.js";
+import { ForbiddenError, NotFoundError, ValidationError } from "../errors/app-error.js";
 import type {
   GameSessionRepository,
   ScenarioRepository,
@@ -32,7 +32,7 @@ export class TurnSubmissionService {
     return this.turnRepository.listTurnsBySessionId(sessionId);
   }
 
-  async submitTurn(sessionId: string, input: CreateTurnRequest): Promise<{
+  async submitTurn(sessionId: string, requestUserId: string, input: CreateTurnRequest): Promise<{
     game: Game;
     resolution: TurnResolution;
     followupResolutions: TurnResolution[];
@@ -41,6 +41,21 @@ export class TurnSubmissionService {
 
     if (!game) {
       throw new NotFoundError(`Game ${sessionId} was not found.`);
+    }
+
+    if (
+      game.ownerUserId !== requestUserId &&
+      !game.players.some((player) => player.userId === requestUserId)
+    ) {
+      throw new ForbiddenError(`User ${requestUserId} cannot access game ${sessionId}.`);
+    }
+
+    const actingPlayer = game.players.find((player) => player.id === input.playerId);
+
+    if (!actingPlayer || actingPlayer.userId !== requestUserId) {
+      throw new ForbiddenError(
+        `User ${requestUserId} cannot submit turns for player ${input.playerId}.`
+      );
     }
 
     const scenario = await this.scenarioRepository.getScenarioById(game.scenarioId);

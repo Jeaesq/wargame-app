@@ -12,6 +12,7 @@ import type {
   AdvisorResponseProviderInput,
   TurnGenerationProviderInput
 } from "../providers/types.js";
+import { projectSessionForSelection } from "../repositories/session-visibility-projection.js";
 
 export type AdvisorEvalFixture = {
   id: string;
@@ -226,6 +227,7 @@ function createGame(input: {
   return {
     id: "game-eval",
     scenarioId: scenario.id,
+    ownerUserId: "local-dev-user",
     mode: "head_to_head",
     status: "in_progress",
     turnNumber: input.turnNumber,
@@ -237,6 +239,7 @@ function createGame(input: {
         gameId: "game-eval",
         name: "Player USA",
         role: "human",
+        userId: "local-dev-user",
         factionId: "faction-usa",
         seat: 0,
         isActive: true,
@@ -248,6 +251,7 @@ function createGame(input: {
         gameId: "game-eval",
         name: "Player USSR",
         role: "human",
+        userId: "local-dev-user",
         factionId: "faction-ussr",
         seat: 1,
         isActive: true,
@@ -477,6 +481,12 @@ export function createTurnEvalFixtures(): TurnEvalFixture[] {
       name: "Turn narration for a measured airlift expansion",
       input: {
         game: diplomaticGame,
+        publicView: projectSessionForSelection(diplomaticGame, { view: "public" }),
+        actingFactionView: projectSessionForSelection(diplomaticGame, {
+          playerId: "player-usa",
+          factionId: "faction-usa",
+          view: "faction"
+        }),
         scenario,
         targetGameLength: "medium",
         action: diplomaticAction,
@@ -502,6 +512,12 @@ export function createTurnEvalFixtures(): TurnEvalFixture[] {
       name: "Turn narration for a sharp military signal at high tension",
       input: {
         game: militaryGame,
+        publicView: projectSessionForSelection(militaryGame, { view: "public" }),
+        actingFactionView: projectSessionForSelection(militaryGame, {
+          playerId: "player-usa",
+          factionId: "faction-usa",
+          view: "faction"
+        }),
         scenario,
         targetGameLength: "long",
         action: militaryAction,

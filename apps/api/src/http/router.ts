@@ -12,6 +12,7 @@ type RouteMatch = {
 export type ApiServices = {
   advisorQaService: import("../services/advisor-qa-service.js").AdvisorQaService;
   gameSessionService: import("../services/game-session-service.js").GameSessionService;
+  requestIdentityService: import("../services/request-identity-service.js").RequestIdentityService;
   scenarioRepository: import("../repositories/contracts.js").ScenarioRepository;
   turnSubmissionService: import("../services/turn-submission-service.js").TurnSubmissionService;
 };

@@ -30,6 +30,7 @@ export function registerTurnRoutes(router: Router): void {
     "POST",
     "/games/:gameId/turns",
     async ({ params, request, response, services }) => {
+      const identity = services.requestIdentityService.resolveRequestIdentity(request);
       const body = await readJsonBody(request);
       const input = validateWithSchema(
         createTurnRequestSchema,
@@ -39,6 +40,7 @@ export function registerTurnRoutes(router: Router): void {
 
       const result = await services.turnSubmissionService.submitTurn(
         params.gameId,
+        identity.userId,
         input
       );
 

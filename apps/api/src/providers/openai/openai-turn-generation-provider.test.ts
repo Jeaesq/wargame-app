@@ -61,6 +61,7 @@ const scenario: ScenarioDefinition = {
 const game: Game = {
   id: "game-1",
   scenarioId: "scenario-cold-war-berlin-mvp",
+  ownerUserId: "local-dev-user",
   mode: "solo",
   status: "in_progress",
   turnNumber: 1,
@@ -72,6 +73,7 @@ const game: Game = {
       gameId: "game-1",
       name: "Player One",
       role: "human",
+      userId: "local-dev-user",
       factionId: "faction-usa",
       seat: 0,
       isActive: true,

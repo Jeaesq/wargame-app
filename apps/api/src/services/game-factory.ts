@@ -5,11 +5,13 @@ import { ValidationError } from "../errors/app-error.js";
 type RequestedPlayer = {
   name: string;
   role: "human" | "ai" | "observer";
+  userId?: string;
   factionId?: string;
 };
 
 type BuildGameFromScenarioInput = {
   now: string;
+  ownerUserId: string;
   scenario: ScenarioDefinition;
   mode: GameMode;
   requestedPlayers: RequestedPlayer[];
@@ -17,7 +19,7 @@ type BuildGameFromScenarioInput = {
 };
 
 export function buildGameFromScenario(input: BuildGameFromScenarioInput): Game {
-  const { now, mode, requestedPlayers, scenario, targetGameLength } = input;
+  const { now, mode, ownerUserId, requestedPlayers, scenario, targetGameLength } = input;
   const playableFactions = scenario.factions.filter((faction) => faction.isPlayable);
 
   if (playableFactions.length === 0) {
@@ -52,6 +54,7 @@ export function buildGameFromScenario(input: BuildGameFromScenarioInput): Game {
       gameId: "",
       name: player.name,
       role: player.role,
+      userId: player.role === "human" ? player.userId ?? ownerUserId : null,
       factionId,
       seat: index,
       isActive: true,
@@ -71,6 +74,7 @@ export function buildGameFromScenario(input: BuildGameFromScenarioInput): Game {
         gameId: "",
         name: `${faction.name} AI`,
         role: "ai",
+        userId: null,
         factionId: faction.id,
         seat: requestedPlayers.length + index,
         isActive: true,
@@ -117,6 +121,7 @@ export function buildGameFromScenario(input: BuildGameFromScenarioInput): Game {
   return gameSchema.parse({
     id: gameId,
     scenarioId: scenario.id,
+    ownerUserId,
     mode,
     status: "in_progress",
     turnNumber: scenario.startingTurn,

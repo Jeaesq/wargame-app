@@ -18,6 +18,15 @@ import {
 } from "@wargame/shared";
 
 const apiBaseUrl = process.env.API_BASE_URL ?? "http://localhost:4000";
+const developmentUserId = process.env.WARGAME_DEV_USER_ID;
+const developmentUserName = process.env.WARGAME_DEV_USER_NAME;
+
+function buildIdentityHeaders(): Record<string, string> {
+  return {
+    ...(developmentUserId ? { "x-wargame-user-id": developmentUserId } : {}),
+    ...(developmentUserName ? { "x-wargame-user-name": developmentUserName } : {})
+  };
+}
 
 async function apiRequest<T>(path: string, init: RequestInit, schema: {
   parse: (input: unknown) => T;
@@ -26,6 +35,7 @@ async function apiRequest<T>(path: string, init: RequestInit, schema: {
     ...init,
     headers: {
       "Content-Type": "application/json",
+      ...buildIdentityHeaders(),
       ...(init.headers ?? {})
     },
     cache: "no-store"
@@ -181,7 +191,8 @@ export async function askAdvisorStream(
   const response = await fetch(`${apiBaseUrl}/games/${gameId}/advisor/stream`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      ...buildIdentityHeaders()
     },
     body: JSON.stringify(body),
     cache: "no-store"

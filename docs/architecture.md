@@ -38,6 +38,7 @@ The persisted canonical playthrough.
 
 - `sessionId`
 - `scenarioId`
+- `ownerUserId`
 - `mode`
 - `playerAssignments`
 - `turnNumber`
@@ -208,6 +209,14 @@ The backend should treat narrative and strategy generation as a replaceable prov
 - `provider invocation`: a provider implementation is called with structured inputs
 - `output validation`: provider outputs are validated against shared Zod schemas before use
 - `canonical application`: backend services apply validated artifacts into canonical game state
+
+## Identity and ownership
+
+- canonical sessions store an `ownerUserId`
+- player slots may store a `userId`
+- current prototype identity is resolved from a development header or backend default, not from production auth
+- session list and retrieval routes are now ownership-aware
+- the intent is to replace the request identity resolver later without redesigning the game/session services
 
 Current default:
 

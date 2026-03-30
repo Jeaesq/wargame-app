@@ -32,6 +32,7 @@ import { GameSessionService } from "./services/game-session-service.js";
 import { ProviderBackedAdvisorService } from "./services/provider-backed-advisor-service.js";
 import { ProviderBackedBotStrategyService } from "./services/provider-backed-bot-strategy-service.js";
 import { ProviderBackedTurnResolutionService } from "./services/provider-backed-turn-resolution-service.js";
+import { RequestIdentityService } from "./services/request-identity-service.js";
 import { TurnSubmissionService } from "./services/turn-submission-service.js";
 
 function createPersistenceRepositories(config: AppConfig): {
@@ -141,6 +142,7 @@ export function createApiServices(config: AppConfig = getAppConfig()): ApiServic
   const advisorContextRepository = new RepositoryBackedAdvisorContextRepository(
     gameSessionRepository
   );
+  const requestIdentityService = new RequestIdentityService(config.identity);
 
   const turnResolutionService = new ProviderBackedTurnResolutionService(
     turnGenerationProvider,
@@ -153,6 +155,7 @@ export function createApiServices(config: AppConfig = getAppConfig()): ApiServic
   );
 
   return {
+    requestIdentityService,
     scenarioRepository,
     gameSessionService: new GameSessionService(
       gameSessionRepository,

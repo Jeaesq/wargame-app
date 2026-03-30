@@ -86,6 +86,7 @@ const scenario: ScenarioDefinition = {
 const game: Game = {
   id: "game-1",
   scenarioId: scenario.id,
+  ownerUserId: "local-dev-user",
   mode: "head_to_head",
   status: "in_progress",
   turnNumber: 1,
@@ -97,6 +98,7 @@ const game: Game = {
       gameId: "game-1",
       name: "Player One",
       role: "human",
+      userId: "local-dev-user",
       factionId: "faction-usa",
       seat: 0,
       isActive: true,
@@ -108,6 +110,7 @@ const game: Game = {
       gameId: "game-1",
       name: "Player Two",
       role: "human",
+      userId: "local-dev-user",
       factionId: "faction-ussr",
       seat: 1,
       isActive: true,

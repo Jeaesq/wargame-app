@@ -17,6 +17,7 @@ export function registerAdvisorRoutes(router: Router): void {
     "POST",
     "/games/:gameId/advisor",
     async ({ params, request, response, services }) => {
+      const identity = services.requestIdentityService.resolveRequestIdentity(request);
       const body = (await readJsonBody(request)) ?? {};
       const input = validateWithSchema(
         advisorQuestionRequestSchema,
@@ -26,6 +27,7 @@ export function registerAdvisorRoutes(router: Router): void {
 
       const answer = await services.advisorQaService.askQuestion({
         sessionId: params.gameId,
+        requestUserId: identity.userId,
         factionId: input.factionId,
         playerId: input.playerId,
         question: input.question
@@ -39,6 +41,7 @@ export function registerAdvisorRoutes(router: Router): void {
     "POST",
     "/games/:gameId/advisor/stream",
     async ({ params, request, response, services }) => {
+      const identity = services.requestIdentityService.resolveRequestIdentity(request);
       const body = (await readJsonBody(request)) ?? {};
       const input = validateWithSchema(
         advisorQuestionRequestSchema,
@@ -54,6 +57,7 @@ export function registerAdvisorRoutes(router: Router): void {
       try {
         const answer = await services.advisorQaService.askQuestion({
           sessionId: params.gameId,
+          requestUserId: identity.userId,
           factionId: input.factionId,
           playerId: input.playerId,
           question: input.question

@@ -43,6 +43,7 @@ export class PostgresGameSessionRepository implements GameSessionRepository {
         insert into game_sessions (
           id,
           scenario_id,
+          owner_user_id,
           status,
           mode,
           current_faction_id,
@@ -52,10 +53,11 @@ export class PostgresGameSessionRepository implements GameSessionRepository {
           created_at,
           updated_at
         )
-        values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::timestamptz, $10::timestamptz)
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::timestamptz, $11::timestamptz)
         on conflict (id) do update
         set
           scenario_id = excluded.scenario_id,
+          owner_user_id = excluded.owner_user_id,
           status = excluded.status,
           mode = excluded.mode,
           current_faction_id = excluded.current_faction_id,
@@ -68,6 +70,7 @@ export class PostgresGameSessionRepository implements GameSessionRepository {
       [
         canonicalSession.id,
         canonicalSession.scenarioId,
+        canonicalSession.ownerUserId,
         canonicalSession.status,
         canonicalSession.mode,
         canonicalSession.currentFactionId,

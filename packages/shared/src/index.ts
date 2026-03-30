@@ -79,6 +79,7 @@ export const playerSchema = z.object({
   gameId: z.string().min(1),
   name: z.string().min(1),
   role: playerRoleSchema,
+  userId: z.string().min(1).nullable().default(null),
   factionId: z.string().min(1).nullable(),
   seat: z.number().int().nonnegative(),
   isActive: z.boolean().default(true),
@@ -322,6 +323,7 @@ export const scenarioDefinitionSchema = z.object({
 export const gameSchema = z.object({
   id: z.string().min(1),
   scenarioId: z.string().min(1),
+  ownerUserId: z.string().min(1),
   mode: gameModeSchema,
   status: gameStatusSchema,
   turnNumber: z.number().int().nonnegative(),
@@ -353,6 +355,7 @@ export const createGameRequestSchema = z.object({
       z.object({
         name: z.string().min(1),
         role: playerRoleSchema.default("human"),
+        userId: z.string().min(1).optional(),
         factionId: z.string().min(1).optional()
       })
     )
