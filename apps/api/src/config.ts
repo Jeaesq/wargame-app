@@ -1,12 +1,20 @@
-import { z } from "zod";
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { ZodError, z } from "zod";
 
 const persistenceModeSchema = z.enum(["memory", "postgres"]);
 const providerModeSchema = z.enum(["mock", "openai"]);
+const apiRootDirectory = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  ".."
+);
 
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   PERSISTENCE_MODE: persistenceModeSchema.default("memory"),
-  AI_PROVIDER_MODE: providerModeSchema.default("mock"),
+  AI_PROVIDER: providerModeSchema.optional(),
+  AI_PROVIDER_MODE: providerModeSchema.optional(),
   DATABASE_URL: z.string().min(1).optional(),
   PG_POOL_MAX: z.coerce.number().int().positive().default(10),
   OPENAI_API_KEY: z.string().min(1).optional(),
@@ -44,9 +52,114 @@ export type AppConfig = {
 };
 
 let cachedConfig: AppConfig | null = null;
+let apiEnvironmentLoaded = false;
+
+function ensureApiEnvironmentLoaded() {
+  if (apiEnvironmentLoaded || process.env.WARGAME_SKIP_API_ENV_FILES === "true") {
+    apiEnvironmentLoaded = true;
+    return;
+  }
+
+  const fileEnvironment = {
+    ...readEnvironmentFile(path.join(apiRootDirectory, ".env")),
+    ...readEnvironmentFile(path.join(apiRootDirectory, ".env.local"))
+  };
+
+  for (const [key, value] of Object.entries(fileEnvironment)) {
+    if (process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  }
+
+  apiEnvironmentLoaded = true;
+}
+
+function readEnvironmentFile(filePath: string): Record<string, string> {
+  if (!existsSync(filePath)) {
+    return {};
+  }
+
+  const fileContents = readFileSync(filePath, "utf8");
+  const environment: Record<string, string> = {};
+
+  for (const rawLine of fileContents.split(/\r?\n/)) {
+    const line = rawLine.trim();
+
+    if (!line || line.startsWith("#")) {
+      continue;
+    }
+
+    const normalizedLine = line.startsWith("export ")
+      ? line.slice("export ".length)
+      : line;
+    const separatorIndex = normalizedLine.indexOf("=");
+
+    if (separatorIndex < 0) {
+      continue;
+    }
+
+    const key = normalizedLine.slice(0, separatorIndex).trim();
+    const rawValue = normalizedLine.slice(separatorIndex + 1).trim();
+
+    if (!key) {
+      continue;
+    }
+
+    environment[key] = parseEnvironmentValue(rawValue);
+  }
+
+  return environment;
+}
+
+function parseEnvironmentValue(rawValue: string): string {
+  if (
+    (rawValue.startsWith('"') && rawValue.endsWith('"')) ||
+    (rawValue.startsWith("'") && rawValue.endsWith("'"))
+  ) {
+    return rawValue.slice(1, -1);
+  }
+
+  return rawValue;
+}
+
+function resolveProviderMode(
+  provider: ProviderMode | undefined,
+  legacyProvider: ProviderMode | undefined
+): ProviderMode {
+  if (provider && legacyProvider && provider !== legacyProvider) {
+    throw new ConfigError(
+      `AI_PROVIDER=${provider} conflicts with AI_PROVIDER_MODE=${legacyProvider}.`
+    );
+  }
+
+  return provider ?? legacyProvider ?? "mock";
+}
 
 function parseEnvironment() {
-  return envSchema.parse(process.env);
+  ensureApiEnvironmentLoaded();
+
+  try {
+    const env = envSchema.parse(process.env);
+
+    return {
+      ...env,
+      AI_PROVIDER: resolveProviderMode(env.AI_PROVIDER, env.AI_PROVIDER_MODE)
+    };
+  } catch (error) {
+    if (error instanceof ConfigError) {
+      throw error;
+    }
+
+    if (error instanceof ZodError) {
+      throw new ConfigError(
+        `Invalid API configuration: ${error.issues
+          .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+          .join("; ")}`
+      );
+    }
+
+    throw error;
+  }
 }
 
 export function getRequiredDatabaseConfig(): NonNullable<AppConfig["database"]> {
@@ -77,15 +190,15 @@ export function getAppConfig(): AppConfig {
     );
   }
 
-  if (env.AI_PROVIDER_MODE === "openai" && !env.OPENAI_API_KEY) {
+  if (env.AI_PROVIDER === "openai" && !env.OPENAI_API_KEY) {
     throw new ConfigError(
-      "AI_PROVIDER_MODE=openai requires OPENAI_API_KEY to be set."
+      "AI_PROVIDER=openai requires OPENAI_API_KEY to be set."
     );
   }
 
-  if (env.AI_PROVIDER_MODE === "openai" && !env.OPENAI_MODEL) {
+  if (env.AI_PROVIDER === "openai" && !env.OPENAI_MODEL) {
     throw new ConfigError(
-      "AI_PROVIDER_MODE=openai requires OPENAI_MODEL to be set."
+      "AI_PROVIDER=openai requires OPENAI_MODEL to be set."
     );
   }
 
@@ -95,7 +208,7 @@ export function getAppConfig(): AppConfig {
       mode: env.PERSISTENCE_MODE
     },
     providers: {
-      mode: env.AI_PROVIDER_MODE,
+      mode: env.AI_PROVIDER,
       openai:
         env.OPENAI_API_KEY && env.OPENAI_MODEL
           ? {
@@ -114,4 +227,9 @@ export function getAppConfig(): AppConfig {
   };
 
   return cachedConfig;
+}
+
+export function resetAppConfigCache() {
+  cachedConfig = null;
+  apiEnvironmentLoaded = false;
 }
