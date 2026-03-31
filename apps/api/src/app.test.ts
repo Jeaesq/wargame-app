@@ -378,6 +378,26 @@ test("submit turn persists human and bot resolutions and updates canonical state
   assert.equal(submission.game.turnNumber, 2);
   assert.equal(submission.game.progression.currentRound, 2);
   assert.equal(submission.game.progression.completedRoundCount, 1);
+  const nextHumanState = submission.game.state.privateByPlayer.find(
+    (state) => state.factionId === "faction-usa"
+  );
+  assert.ok(nextHumanState);
+  assert.equal(
+    nextHumanState.availableOptions.some((option) => option.id === "option-usa-airlift"),
+    false
+  );
+  assert.equal(
+    nextHumanState.availableOptions.some((option) => option.id === "option-usa-airlift-harden"),
+    true
+  );
+  assert.equal(
+    nextHumanState.availableOptions.some(
+      (option) =>
+        option.id === "option-usa-airlift-harden" &&
+        option.metadata.generatedFromOptionId === "option-usa-airlift-followup-template"
+    ),
+    true
+  );
   assert.ok(submission.game.lastResolution);
   assert.equal(submission.game.lastResolution?.actor.playerRole, "ai");
 

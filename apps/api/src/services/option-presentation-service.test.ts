@@ -203,7 +203,16 @@ test("available options stay concise, diverse, and analytically explained", () =
       visibleTracks: {
         diplomaticPressure: 61,
         globalAttention: 67
-      }
+      },
+      publicFlags: ["berlin-crisis"],
+      revealedEvents: ["checkpoint-incident"]
+    },
+    privateState: {
+      secretFlags: ["backchannel-open"],
+      hiddenTracks: {
+        allianceConfidence: 60
+      },
+      metadata: {}
     },
     derivedState: {
       escalationRiskPercent: 76,
@@ -236,6 +245,7 @@ test("available options stay concise, diverse, and analytically explained", () =
       }
     },
     targetGameLength: "medium",
+    currentRound: 3,
     recommendationNotes: [
       {
         optionId: "opt-intel",

@@ -54,7 +54,7 @@ Unlocks
 - all implementation work
 
 ### Phase 1: Solo turn model and progression foundation
-Status: in progress
+Status: completed
 
 Goal
 - make one player action plus one AI response map cleanly to one player-facing solo turn without weakening backend authority
@@ -76,17 +76,17 @@ Unlocks
 - meaningful pacing and playtests
 
 ### Phase 2: State-driven option generation
-Status: pending
+Status: completed
 
 Goal
 - replace mostly static catalog selection with backend-computed legal options driven by canonical state
 
 Concrete steps
-1. Introduce a dedicated backend rules layer for legal option generation.
-2. Add scenario-side metadata for prerequisites, cooldowns, one-time choices, follow-ups, and state-tagged variants.
-3. Separate reusable option templates from "legal right now" options.
-4. Keep visibility strict: the backend computes legality, the frontend renders approved options only.
-5. Add tests for prerequisites, cooldowns, variants, and trigger-based availability.
+1. Introduce a dedicated backend rules layer for legal option generation. Completed with a legal-option service that filters scenario options before presentation scoring.
+2. Add scenario-side metadata for prerequisites, cooldowns, one-time choices, follow-ups, and state-tagged variants. Completed for the initial Berlin slice through option metadata rules and faction-private option-usage tracking.
+3. Separate reusable option templates from "legal right now" options. Completed for the initial slice by adding backend-generated variants from option templates before legality filtering and ranking.
+4. Keep visibility strict: the backend computes legality, the frontend renders approved options only. Completed for the current slice.
+5. Add tests for prerequisites, cooldowns, variants, and trigger-based availability. Completed for the current rule-engine and generated-variant slice; expand as new rule types are added.
 
 Depends on
 - Phase 1

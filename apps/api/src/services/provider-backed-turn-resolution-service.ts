@@ -11,6 +11,7 @@ import { ValidationError } from "../errors/app-error.js";
 import { logInfo } from "../logger.js";
 import type { TurnGenerationProvider } from "../providers/types.js";
 import { projectSessionForSelection } from "../repositories/session-visibility-projection.js";
+import { recordOptionUsageInPrivateStateMetadata } from "./legal-option-service.js";
 import { buildAvailableOptions } from "./option-presentation-service.js";
 import { generateSessionScopedId } from "./session-debug-service.js";
 import { evaluateSessionOutcome } from "./session-outcome-service.js";
@@ -93,6 +94,14 @@ function sanitizeNarrativePrivateUpdates(input: {
   );
 }
 
+function findPrivateStateForFaction(game: Game, factionId: string | null) {
+  if (!factionId) {
+    return null;
+  }
+
+  return game.state.privateByPlayer.find((state) => state.factionId === factionId) ?? null;
+}
+
 function getNextFactionInOrder(game: Game, actingFactionId: string): string | null {
   const playableFactionOrder = game.players
     .map((player) => player.factionId)
@@ -127,6 +136,16 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
         Math.round(prepared.tensionDelta / 2) +
         prepared.selectedOption.effectProfile.escalationRiskDelta
     );
+    const nextPublicFlags = applyStringAddsAndRemoves({
+      current: input.game.state.public.publicFlags,
+      adds: prepared.selectedOption.effectProfile.publicFlagAdds,
+      removes: prepared.selectedOption.effectProfile.publicFlagRemoves
+    });
+    const nextRevealedEvents = applyStringAddsAndRemoves({
+      current: input.game.state.public.revealedEvents,
+      adds: prepared.selectedOption.effectProfile.revealedEventAdds,
+      removes: []
+    });
     const nextVisibleTracks = applyStatDeltas(
       input.game.state.public.visibleTracks,
       prepared.selectedOption.effectProfile.visibleTrackDeltas
@@ -150,13 +169,22 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
       factionMomentum: nextFactionMomentum,
       selectedOption: prepared.selectedOption
     });
+    const actingPrivateMetadata = prepared.actingPrivateState.metadata ?? {};
+    const nextActingPrivateMetadata = recordOptionUsageInPrivateStateMetadata({
+      metadata: actingPrivateMetadata,
+      optionId: prepared.selectedOption.id,
+      roundNumber: prepared.roundNumber
+    });
     const curatedNextOptions = buildAvailableOptions({
       scenario: input.scenario,
       factionId: prepared.nextFactionId,
       publicState: {
         worldTension: prepared.nextWorldTension,
-        visibleTracks: nextVisibleTracks
+        visibleTracks: nextVisibleTracks,
+        publicFlags: nextPublicFlags,
+        revealedEvents: nextRevealedEvents
       },
+      privateState: findPrivateStateForFaction(input.game, prepared.nextFactionId),
       derivedState: {
         escalationRiskPercent: escalationRisk,
         negotiationLeverage: nextNegotiationLeverage,
@@ -164,6 +192,7 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
         outcome: sessionOutcome
       },
       targetGameLength: input.game.sessionConfig.targetGameLength,
+      currentRound: prepared.nextTurnNumber,
       limit: 4
     });
     const rawArtifacts = await this.provider.generateTurnArtifacts({
@@ -315,6 +344,9 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
       recommendedOptionNotes: validatedRecommendedOptionNotes,
       escalationRisk,
       nextVisibleTracks,
+      nextPublicFlags,
+      nextRevealedEvents,
+      nextActingPrivateMetadata,
       nextNegotiationLeverage,
       nextFactionMomentum,
       sessionOutcome,
@@ -419,6 +451,9 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
     recommendedOptionNotes: Array<{ optionId: string; rationale: string }>;
     escalationRisk: number;
     nextVisibleTracks: Record<string, number>;
+    nextPublicFlags: string[];
+    nextRevealedEvents: string[];
+    nextActingPrivateMetadata: Record<string, unknown>;
     nextNegotiationLeverage: Record<string, number>;
     nextFactionMomentum: Record<string, number>;
     sessionOutcome: Game["state"]["derived"]["outcome"];
@@ -434,8 +469,11 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
             factionId: nextFactionId,
             publicState: {
               worldTension: prepared.nextWorldTension,
-              visibleTracks: input.nextVisibleTracks
+              visibleTracks: input.nextVisibleTracks,
+              publicFlags: input.nextPublicFlags,
+              revealedEvents: input.nextRevealedEvents
             },
+            privateState: findPrivateStateForFaction(game, nextFactionId),
             derivedState: {
               escalationRiskPercent: input.escalationRisk,
               negotiationLeverage: input.nextNegotiationLeverage,
@@ -443,6 +481,7 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
               outcome: input.sessionOutcome
             },
             targetGameLength: game.sessionConfig.targetGameLength,
+            currentRound: prepared.nextTurnNumber,
             recommendationNotes: input.recommendedOptionNotes,
             limit: 4
           })
@@ -470,21 +509,17 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
           publicNarrative: resolution.llmNarrative.publicSummary,
           headline: resolution.llmNarrative.headline,
           visibleTracks: input.nextVisibleTracks,
-          publicFlags: applyStringAddsAndRemoves({
-            current: game.state.public.publicFlags,
-            adds: prepared.selectedOption.effectProfile.publicFlagAdds,
-            removes: prepared.selectedOption.effectProfile.publicFlagRemoves
-          }),
-          revealedEvents: applyStringAddsAndRemoves({
-            current: game.state.public.revealedEvents,
-            adds: prepared.selectedOption.effectProfile.revealedEventAdds,
-            removes: []
-          }),
+          publicFlags: input.nextPublicFlags,
+          revealedEvents: input.nextRevealedEvents,
           updatedAt: prepared.resolvedAt
         },
         privateByPlayer: game.state.privateByPlayer.map((state) => ({
           ...state,
           turnNumber: prepared.nextTurnNumber,
+          metadata:
+            state.playerId === prepared.actingPlayer.id
+              ? input.nextActingPrivateMetadata
+              : state.metadata,
           privateBriefing:
             isCompleted
               ? input.sessionOutcome.summary ?? state.privateBriefing

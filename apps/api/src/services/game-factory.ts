@@ -146,8 +146,13 @@ export function buildGameFromScenario(input: BuildGameFromScenarioInput): Game {
     factionId: currentFactionId,
     publicState: {
       worldTension: scenario.openingState.publicState.worldTension,
-      visibleTracks: scenario.openingState.publicState.visibleTracks
+      visibleTracks: scenario.openingState.publicState.visibleTracks,
+      publicFlags: scenario.openingState.publicState.publicFlags,
+      revealedEvents: scenario.openingState.publicState.revealedEvents
     },
+    privateState:
+      scenario.openingState.privateStates.find((state) => state.factionId === currentFactionId) ??
+      null,
     derivedState: {
       escalationRiskPercent: scenario.openingState.derivedState.escalationRiskPercent,
       negotiationLeverage: scenario.openingState.derivedState.negotiationLeverage,
@@ -155,6 +160,7 @@ export function buildGameFromScenario(input: BuildGameFromScenarioInput): Game {
       outcome: openingDerivedState.outcome
     },
     targetGameLength,
+    currentRound: scenario.startingTurn,
     limit: 4
   });
 

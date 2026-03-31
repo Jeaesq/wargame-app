@@ -1,10 +1,12 @@
 import type {
   ChoiceOption,
   DerivedGameState,
+  PrivatePlayerState,
   PublicGameState,
   ScenarioDefinition,
   TargetGameLength
 } from "@wargame/shared";
+import { listLegalOptions } from "./legal-option-service.js";
 
 type RecommendationNote = {
   optionId: string;
@@ -14,12 +16,20 @@ type RecommendationNote = {
 type BuildAvailableOptionsInput = {
   scenario: ScenarioDefinition;
   factionId: string | null;
-  publicState: Pick<PublicGameState, "worldTension" | "visibleTracks">;
+  publicState: Pick<
+    PublicGameState,
+    "worldTension" | "visibleTracks" | "publicFlags" | "revealedEvents"
+  >;
+  privateState: Pick<
+    PrivatePlayerState,
+    "secretFlags" | "hiddenTracks" | "metadata"
+  > | null;
   derivedState: Pick<
     DerivedGameState,
     "escalationRiskPercent" | "negotiationLeverage" | "factionMomentum" | "outcome"
   >;
   targetGameLength: TargetGameLength;
+  currentRound: number;
   recommendationNotes?: RecommendationNote[];
   limit?: number;
 };
@@ -244,8 +254,14 @@ export function buildAvailableOptions(input: BuildAvailableOptionsInput): Choice
   const recommendationNotes = new Map(
     (input.recommendationNotes ?? []).map((note) => [note.optionId, note.rationale])
   );
-  const candidates = input.scenario.choiceCatalog
-    .filter((option) => option.factionId === input.factionId)
+  const legalOptions = listLegalOptions({
+    scenario: input.scenario,
+    factionId: input.factionId,
+    publicState: input.publicState,
+    privateState: input.privateState,
+    currentRound: input.currentRound
+  });
+  const candidates = legalOptions
     .map((option) => {
       const score = scoreOption({
         option,

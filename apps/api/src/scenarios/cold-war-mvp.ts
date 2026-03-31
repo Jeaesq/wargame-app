@@ -29,7 +29,12 @@ export function createColdWarMvpScenarioDefinition() {
           "Soviet pressure fractures Western resolve or forces visible retreat."
         ],
         visibility: "public",
-        metadata: {}
+        metadata: {
+          optionRules: {
+            oncePerGame: true,
+            maxWorldTension: 72
+          }
+        }
       },
       {
         id: "objective-ussr-force-concessions",
@@ -46,7 +51,11 @@ export function createColdWarMvpScenarioDefinition() {
           "Escalation becomes too dangerous to exploit."
         ],
         visibility: "public",
-        metadata: {}
+        metadata: {
+          optionRules: {
+            cooldownRounds: 2
+          }
+        }
       }
     ],
     factions: [
@@ -62,7 +71,12 @@ export function createColdWarMvpScenarioDefinition() {
         privateTraits: ["intel-coverage", "domestic-pressure"],
         colorToken: "blue",
         isPlayable: true,
-        metadata: {}
+        metadata: {
+          optionRules: {
+            oncePerGame: true,
+            requiredPublicFlags: ["berlin-crisis"]
+          }
+        }
       },
       {
         id: "faction-ussr",
@@ -76,7 +90,12 @@ export function createColdWarMvpScenarioDefinition() {
         privateTraits: ["command-confidence", "covert-capability"],
         colorToken: "red",
         isPlayable: true,
-        metadata: {}
+        metadata: {
+          optionRules: {
+            oncePerGame: true,
+            maxWorldTension: 72
+          }
+        }
       }
     ],
     openingState: {
@@ -96,7 +115,11 @@ export function createColdWarMvpScenarioDefinition() {
         },
         publicFlags: ["berlin-crisis", "superpower-standoff"],
         revealedEvents: ["checkpoints-tightened"],
-        metadata: {}
+        metadata: {
+          optionRules: {
+            cooldownRounds: 2
+          }
+        }
       },
       privateStates: [
         {
@@ -161,7 +184,12 @@ export function createColdWarMvpScenarioDefinition() {
           metadata: {}
         },
         warnings: ["Misreading intentions could cause rapid crisis escalation."],
-        metadata: {}
+        metadata: {
+          optionRules: {
+            oncePerGame: true,
+            requiredPublicFlags: ["berlin-crisis"]
+          }
+        }
       },
       initialOptions: [
         {
@@ -262,7 +290,12 @@ export function createColdWarMvpScenarioDefinition() {
           revealedEventAdds: ["western-protest-note"],
           warningAdds: []
         },
-        metadata: {}
+        metadata: {
+          optionRules: {
+            oncePerGame: true,
+            maxWorldTension: 72
+          }
+        }
       },
       {
         id: "option-usa-airlift",
@@ -295,7 +328,11 @@ export function createColdWarMvpScenarioDefinition() {
           revealedEventAdds: ["airlift-sorties-expanded"],
           warningAdds: ["Military signaling is raising the stakes around Berlin."]
         },
-        metadata: {}
+        metadata: {
+          optionRules: {
+            cooldownRounds: 2
+          }
+        }
       },
       {
         id: "option-usa-alliance-summit",
@@ -327,7 +364,12 @@ export function createColdWarMvpScenarioDefinition() {
           revealedEventAdds: ["allied-consultations-begin"],
           warningAdds: []
         },
-        metadata: {}
+        metadata: {
+          optionRules: {
+            oncePerGame: true,
+            requiredPublicFlags: ["berlin-crisis"]
+          }
+        }
       },
       {
         id: "option-usa-backchannel",
@@ -360,7 +402,105 @@ export function createColdWarMvpScenarioDefinition() {
           revealedEventAdds: ["signals-of-private-contact"],
           warningAdds: []
         },
-        metadata: {}
+        metadata: {
+          optionRules: {
+            requiredSecretFlags: ["backchannel-open"],
+            cooldownRounds: 2,
+            maxWorldTension: 70
+          }
+        }
+      },
+      {
+        id: "option-usa-airlift-followup-template",
+        scenarioId: "scenario-cold-war-berlin-mvp",
+        factionId: "faction-usa",
+        kind: "military_signal",
+        title: "Airlift follow-up template",
+        summary:
+          "Template for follow-up actions after the airlift has become the center of the crisis.",
+        visibility: "public",
+        requirementTags: ["briefing"],
+        consequenceHints: ["followup"],
+        recommendationPercent: 60,
+        effectProfile: {
+          worldTensionDelta: 0,
+          escalationRiskDelta: 0,
+          visibleTrackDeltas: {},
+          negotiationLeverageDeltas: {},
+          factionMomentumDeltas: {},
+          publicFlagAdds: [],
+          publicFlagRemoves: [],
+          revealedEventAdds: [],
+          warningAdds: []
+        },
+        metadata: {
+          optionRules: {
+            requiredPublicFlags: ["airlift-expanded"],
+            followupToOptionIds: ["option-usa-airlift"],
+            cooldownRounds: 2
+          },
+          generatedVariants: [
+            {
+              id: "option-usa-airlift-harden",
+              title: "Harden the air corridor",
+              summary:
+                "Convert earlier resolve into a more resilient air corridor posture before Soviet pressure adapts.",
+              consequenceHints: ["followup", "sustained-resolve"],
+              recommendationPercent: 62,
+              effectProfile: {
+                worldTensionDelta: 4,
+                escalationRiskDelta: 3,
+                visibleTrackDeltas: {
+                  militaryPosture: 4,
+                  diplomaticPressure: 2
+                },
+                negotiationLeverageDeltas: {
+                  "faction-usa": 4,
+                  "faction-ussr": -1
+                },
+                factionMomentumDeltas: {
+                  "faction-usa": 5
+                },
+                publicFlagAdds: ["air-corridor-hardened"],
+                revealedEventAdds: ["airlift-routes-reorganized"],
+                warningAdds: [
+                  "Sustained air access now depends on continued political discipline."
+                ]
+              },
+              metadata: {}
+            },
+            {
+              id: "option-usa-airlift-relief-window",
+              title: "Create a relief window around the airlift",
+              summary:
+                "Pair the airlift with a tightly managed diplomatic pause to keep Allied support firm while pressure remains visible.",
+              kind: "diplomatic",
+              consequenceHints: ["followup", "controlled-offramp"],
+              recommendationPercent: 58,
+              effectProfile: {
+                worldTensionDelta: -1,
+                escalationRiskDelta: -2,
+                visibleTrackDeltas: {
+                  diplomaticPressure: 3,
+                  globalAttention: 1
+                },
+                negotiationLeverageDeltas: {
+                  "faction-usa": 3
+                },
+                factionMomentumDeltas: {
+                  "faction-usa": 2
+                },
+                publicFlagAdds: ["airlift-relief-window"],
+                revealedEventAdds: ["allied-relief-window-signaled"]
+              },
+              metadata: {
+                optionRules: {
+                  maxWorldTension: 75
+                }
+              }
+            }
+          ]
+        }
       },
       {
         id: "option-ussr-pressure",
@@ -393,7 +533,11 @@ export function createColdWarMvpScenarioDefinition() {
           revealedEventAdds: ["soviet-checks-expanded"],
           warningAdds: ["Incremental coercion is hardening the standoff."]
         },
-        metadata: {}
+        metadata: {
+          optionRules: {
+            cooldownRounds: 2
+          }
+        }
       },
       {
         id: "option-ussr-backchannel",
@@ -424,7 +568,13 @@ export function createColdWarMvpScenarioDefinition() {
           revealedEventAdds: ["private-overtures-reported"],
           warningAdds: []
         },
-        metadata: {}
+        metadata: {
+          optionRules: {
+            requiredSecretFlags: ["pressure-advantage"],
+            cooldownRounds: 2,
+            maxWorldTension: 75
+          }
+        }
       },
       {
         id: "option-ussr-probe-checkpoints",
@@ -458,7 +608,12 @@ export function createColdWarMvpScenarioDefinition() {
           revealedEventAdds: ["checkpoint-columns-mobilized"],
           warningAdds: ["Miscalculation is becoming more likely as armed signaling rises."]
         },
-        metadata: {}
+        metadata: {
+          optionRules: {
+            minWorldTension: 48,
+            cooldownRounds: 2
+          }
+        }
       },
       {
         id: "option-ussr-propaganda",
@@ -492,6 +647,46 @@ export function createColdWarMvpScenarioDefinition() {
           warningAdds: []
         },
         metadata: {}
+      },
+      {
+        id: "option-ussr-exploit-airlift-strain",
+        scenarioId: "scenario-cold-war-berlin-mvp",
+        factionId: "faction-ussr",
+        kind: "intelligence",
+        title: "Exploit airlift strain indirectly",
+        summary:
+          "Lean on deniable pressure and logistics friction once the Western air effort is visibly committed.",
+        visibility: "private",
+        requirementTags: ["briefing"],
+        consequenceHints: ["followup", "covert-pressure"],
+        recommendationPercent: 64,
+        effectProfile: {
+          worldTensionDelta: 3,
+          escalationRiskDelta: 2,
+          visibleTrackDeltas: {
+            diplomaticPressure: 3,
+            globalAttention: 2
+          },
+          negotiationLeverageDeltas: {
+            "faction-ussr": 5,
+            "faction-usa": -2
+          },
+          factionMomentumDeltas: {
+            "faction-ussr": 4
+          },
+          publicFlagAdds: ["airlift-under-strain"],
+          publicFlagRemoves: [],
+          revealedEventAdds: ["corridor-harassment-reports"],
+          warningAdds: ["Covert friction can still provoke a dangerous overreaction."]
+        },
+        metadata: {
+          optionRules: {
+            requiredPublicFlags: ["airlift-expanded"],
+            minVisibleTracks: {
+              militaryPosture: 45
+            }
+          }
+        }
       }
     ],
     metadata: {
