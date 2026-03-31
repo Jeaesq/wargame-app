@@ -29,16 +29,23 @@ function toVisibleOptionSnapshot(option: {
   id: string;
   title: string;
   summary: string;
+  detail?: string;
   kind: string;
   recommendationPercent: number | null;
   consequenceHints: string[];
   requirementTags: string[];
+  metadata?: Record<string, unknown>;
 }) {
   return {
     id: option.id,
     title: option.title,
     summary: option.summary,
+    detail: option.detail,
     kind: option.kind,
+    category:
+      typeof option.metadata?.presentationCategory === "string"
+        ? option.metadata.presentationCategory
+        : option.kind,
     recommendationPercent: option.recommendationPercent,
     consequenceHints: option.consequenceHints,
     requirementTags: option.requirementTags
@@ -136,8 +143,17 @@ export function buildOpenAITurnGenerationPrompt(
           id: candidate.id,
           title: candidate.title,
           summary: candidate.summary,
+          detail: candidate.detail ?? null,
           kind: candidate.kind,
-          recommendationPercent: candidate.recommendationPercent
+          category:
+            typeof candidate.metadata.presentationCategory === "string"
+              ? candidate.metadata.presentationCategory
+              : candidate.kind,
+          recommendationPercent: candidate.recommendationPercent,
+          consequenceHints: candidate.consequenceHints,
+          visibleTrackDeltas: candidate.effectProfile.visibleTrackDeltas,
+          worldTensionDelta: candidate.effectProfile.worldTensionDelta,
+          escalationRiskDelta: candidate.effectProfile.escalationRiskDelta
         }))
       },
       outputRequirements: {
@@ -153,6 +169,8 @@ export function buildOpenAITurnGenerationPrompt(
           "Short tags naming concrete risks such as escalation, exposure, or diplomatic backlash.",
         recommendedNextOptionIds:
           "Only option ids from visibleNextOptions. Use an empty array if none stand out from the supplied evidence.",
+        recommendedOptionNotes:
+          "Zero to three concise notes keyed to option ids from visibleNextOptions. Explain why an option is strong or weak in this exact state, using concrete tradeoffs rather than generic praise.",
         worldUpdateSuggestions:
           "Advisory narrative suggestions only. They do not override backend state.",
         llmNarrative:
@@ -164,6 +182,8 @@ export function buildOpenAITurnGenerationPrompt(
         "Distinguish direct facts from interpretation. Direct facts should be stated plainly; interpretations should stay cautious and compatible with the prompt.",
         "Respect targetGameLength as pacing guidance, not as a promise about how many turns remain.",
         "recommendedNextOptionIds must only contain ids from visibleNextOptions.",
+        "recommendedOptionNotes must only reference ids from visibleNextOptions and should reward category variety where the supplied options support it.",
+        "When visibleNextOptions span multiple strategic categories, favor concise comparisons that make those categories feel meaningfully different.",
         "worldUpdateSuggestions are advisory proposals only and must not assume they automatically become canonical state.",
         ...buildNarrativeQualityRules()
       ]

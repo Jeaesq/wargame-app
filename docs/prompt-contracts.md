@@ -30,7 +30,7 @@ Outputs:
 
 - public summary paragraph
 - private briefing paragraph if applicable
-- list of option copy proposals aligned to backend-provided option ids
+- short recommendation notes aligned to backend-provided option ids
 
 ### Post-resolution outcome narration
 
@@ -69,7 +69,7 @@ These names are conceptual and should map to Zod schemas in `packages/shared`.
 
 - `publicSummary`: string
 - `privateBriefings`: array of faction-scoped briefing objects
-- `optionCopy`: array keyed by backend option id
+- `recommendedOptionNotes`: array keyed by backend option id
 - `toneTags`: array of strings
 
 ### `PostResolutionNarrativeResponse`
@@ -136,6 +136,7 @@ Store enough metadata to debug prompt behavior without making prompt history the
 - how a newspaper-style summary is worded
 - how a private intelligence note is phrased
 - how the option descriptions feel distinct and thematic
+- how concise recommendation notes explain why visible backend-owned options differ strategically
 - what narrative tags are attached within allowed taxonomy
 
 ## Security and consistency notes

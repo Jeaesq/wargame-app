@@ -12,6 +12,7 @@ import { ValidationError } from "../errors/app-error.js";
 import { logInfo } from "../logger.js";
 import type { TurnGenerationProvider } from "../providers/types.js";
 import { projectSessionForSelection } from "../repositories/session-visibility-projection.js";
+import { buildAvailableOptions } from "./option-presentation-service.js";
 import { evaluateSessionOutcome } from "./session-outcome-service.js";
 import type {
   ResolveTurnInput,
@@ -27,7 +28,6 @@ type PreparedTurnContext = {
   nextTurnNumber: number;
   tensionDelta: number;
   nextWorldTension: number;
-  nextOptions: ChoiceOption[];
   resolvedAt: string;
 };
 
@@ -103,29 +103,6 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
       factionId: input.action.factionId,
       view: "faction"
     });
-    const rawArtifacts = await this.provider.generateTurnArtifacts({
-      ...input,
-      publicView,
-      actingFactionView,
-      targetGameLength: input.game.sessionConfig.targetGameLength,
-      ...prepared
-    });
-    const artifacts = turnGenerationArtifactsSchema.parse(rawArtifacts);
-    const recommendedNextOptionIds = artifacts.recommendedNextOptionIds ?? [];
-    const worldUpdateSuggestions = artifacts.worldUpdateSuggestions ?? [];
-    const privateSummaries = sanitizePrivateSummaries({
-      privateSummaries: artifacts.privateSummaries,
-      actingPlayerId: prepared.actingPlayer.id,
-      actingFactionId: input.action.factionId
-    });
-    const narrativePrivateUpdates = sanitizeNarrativePrivateUpdates({
-      privateUpdates: artifacts.llmNarrative.privateUpdates,
-      actingFactionId: input.action.factionId
-    });
-    const validatedRecommendedNextOptionIds = prepared.nextOptions
-      .map((candidate) => candidate.id)
-      .filter((optionId) => recommendedNextOptionIds.includes(optionId));
-
     const escalationRisk = clampPercentage(
       input.game.state.derived.escalationRiskPercent +
         Math.round(prepared.tensionDelta / 2) +
@@ -154,6 +131,49 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
       factionMomentum: nextFactionMomentum,
       selectedOption: prepared.selectedOption
     });
+    const curatedNextOptions = buildAvailableOptions({
+      scenario: input.scenario,
+      factionId: prepared.nextFactionId,
+      publicState: {
+        worldTension: prepared.nextWorldTension,
+        visibleTracks: nextVisibleTracks
+      },
+      derivedState: {
+        escalationRiskPercent: escalationRisk,
+        negotiationLeverage: nextNegotiationLeverage,
+        factionMomentum: nextFactionMomentum,
+        outcome: sessionOutcome
+      },
+      targetGameLength: input.game.sessionConfig.targetGameLength,
+      limit: 4
+    });
+    const rawArtifacts = await this.provider.generateTurnArtifacts({
+      ...input,
+      publicView,
+      actingFactionView,
+      targetGameLength: input.game.sessionConfig.targetGameLength,
+      ...prepared,
+      nextOptions: curatedNextOptions
+    });
+    const artifacts = turnGenerationArtifactsSchema.parse(rawArtifacts);
+    const recommendedNextOptionIds = artifacts.recommendedNextOptionIds ?? [];
+    const recommendedOptionNotes = artifacts.recommendedOptionNotes ?? [];
+    const worldUpdateSuggestions = artifacts.worldUpdateSuggestions ?? [];
+    const privateSummaries = sanitizePrivateSummaries({
+      privateSummaries: artifacts.privateSummaries,
+      actingPlayerId: prepared.actingPlayer.id,
+      actingFactionId: input.action.factionId
+    });
+    const narrativePrivateUpdates = sanitizeNarrativePrivateUpdates({
+      privateUpdates: artifacts.llmNarrative.privateUpdates,
+      actingFactionId: input.action.factionId
+    });
+    const validatedRecommendedNextOptionIds = curatedNextOptions
+      .map((candidate) => candidate.id)
+      .filter((optionId) => recommendedNextOptionIds.includes(optionId));
+    const validatedRecommendedOptionNotes = recommendedOptionNotes.filter((note) =>
+      curatedNextOptions.some((candidate) => candidate.id === note.optionId)
+    );
 
     const resolution = turnResolutionSchema.parse({
       id: randomUUID(),
@@ -261,6 +281,7 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
       actionFactionId: input.action.factionId,
       prepared,
       recommendedNextOptionIds: validatedRecommendedNextOptionIds,
+      recommendedOptionNotes: validatedRecommendedOptionNotes,
       escalationRisk,
       nextVisibleTracks,
       nextNegotiationLeverage,
@@ -316,10 +337,6 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
     const nextWorldTension = clampPercentage(
       input.game.state.public.worldTension + tensionDelta
     );
-    const nextOptions = input.scenario.choiceCatalog.filter(
-      (candidate) => candidate.factionId === nextFactionId
-    );
-
     return {
       actingPlayer,
       actingPrivateState,
@@ -328,7 +345,6 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
       nextTurnNumber,
       tensionDelta,
       nextWorldTension,
-      nextOptions,
       resolvedAt: this.now()
     };
   }
@@ -339,6 +355,7 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
     actionFactionId: string;
     prepared: PreparedTurnContext;
     recommendedNextOptionIds: string[];
+    recommendedOptionNotes: Array<{ optionId: string; rationale: string }>;
     escalationRisk: number;
     nextVisibleTracks: Record<string, number>;
     nextNegotiationLeverage: Record<string, number>;
@@ -349,6 +366,26 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
     const { game, prepared, resolution, scenario } = input;
     const isCompleted = input.sessionOutcome.status === "ended";
     const nextFactionId = isCompleted ? null : prepared.nextFactionId;
+    const nextAvailableOptions =
+      !isCompleted && nextFactionId
+        ? buildAvailableOptions({
+            scenario,
+            factionId: nextFactionId,
+            publicState: {
+              worldTension: prepared.nextWorldTension,
+              visibleTracks: input.nextVisibleTracks
+            },
+            derivedState: {
+              escalationRiskPercent: input.escalationRisk,
+              negotiationLeverage: input.nextNegotiationLeverage,
+              factionMomentum: input.nextFactionMomentum,
+              outcome: input.sessionOutcome
+            },
+            targetGameLength: game.sessionConfig.targetGameLength,
+            recommendationNotes: input.recommendedOptionNotes,
+            limit: 4
+          })
+        : [];
     const nextWarnings = [
       ...game.state.derived.warnings,
       ...prepared.selectedOption.effectProfile.warningAdds,
@@ -403,7 +440,7 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
                 ]
               : state.intelligence,
           availableOptions:
-            !isCompleted && state.factionId === prepared.nextFactionId ? prepared.nextOptions : []
+            !isCompleted && state.factionId === prepared.nextFactionId ? nextAvailableOptions : []
         })),
         derived: {
           ...game.state.derived,
@@ -411,13 +448,13 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
           actingPlayerIds: game.players
             .filter((player) => player.factionId === nextFactionId)
             .map((player) => player.id),
-          legalActionIds: isCompleted ? [] : prepared.nextOptions.map((candidate) => candidate.id),
+          legalActionIds: isCompleted ? [] : nextAvailableOptions.map((candidate) => candidate.id),
           recommendedActionIds:
             isCompleted
               ? []
               : input.recommendedNextOptionIds.length > 0
               ? input.recommendedNextOptionIds
-              : prepared.nextOptions
+              : nextAvailableOptions
                   .filter((candidate) => (candidate.recommendationPercent ?? 0) >= 60)
                   .map((candidate) => candidate.id),
           escalationRiskPercent: input.escalationRisk,

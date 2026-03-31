@@ -16,7 +16,11 @@ export function OptionsList({ options }: OptionsListProps) {
           <article className="option-card" key={option.id}>
             <div className="panel__header">
               <h3>{option.title}</h3>
-              <span className="pill">{option.kind.replaceAll("_", " ")}</span>
+              <span className="pill">
+                {typeof option.metadata.presentationCategory === "string"
+                  ? option.metadata.presentationCategory
+                  : option.kind.replaceAll("_", " ")}
+              </span>
             </div>
             <p>{option.summary}</p>
             {option.detail ? <p className="muted">{option.detail}</p> : null}

@@ -329,13 +329,18 @@ test("turn prompt includes authorized private context and stable next-option con
   const parsed = JSON.parse(prompt.prompt) as {
     scenario: { publicObjectives: Array<{ factionId: string }> };
     publicState: { outcomePressure: { maturityPercent: number } };
+    nextTurnContext: { visibleNextOptions: Array<{ category: string }> };
     authorizedPrivateContext: { factionId: string; intelligence: string[] };
-    outputRequirements: { recommendedNextOptionIds: string };
+    outputRequirements: {
+      recommendedNextOptionIds: string;
+      recommendedOptionNotes: string;
+    };
     rules: string[];
   };
 
   assert.equal(parsed.scenario.publicObjectives[0]?.factionId, "faction-usa");
   assert.equal(parsed.publicState.outcomePressure.maturityPercent, 10);
+  assert.equal(parsed.nextTurnContext.visibleNextOptions[0]?.category, "diplomatic");
   assert.equal(parsed.authorizedPrivateContext.factionId, "faction-usa");
   assert.deepEqual(parsed.authorizedPrivateContext.intelligence, [
     "Soviet pressure is steady but not yet absolute."
@@ -344,7 +349,14 @@ test("turn prompt includes authorized private context and stable next-option con
     parsed.outputRequirements.recommendedNextOptionIds,
     /Only option ids from visibleNextOptions/i
   );
+  assert.match(
+    parsed.outputRequirements.recommendedOptionNotes,
+    /Zero to three concise notes/i
+  );
   assert.ok(
     parsed.rules.some((rule) => /Do not leak or invent private facts for other factions/i.test(rule))
+  );
+  assert.ok(
+    parsed.rules.some((rule) => /category variety/i.test(rule))
   );
 });

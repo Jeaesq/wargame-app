@@ -80,7 +80,10 @@ export default async function TurnPage({ params, searchParams }: TurnPageProps) 
             <PublicStatePanel game={game} />
           </div>
           <div className="section-stack">
-            <PrivateIntelligencePanel privateState={privateState} />
+            <PrivateIntelligencePanel
+              privateState={privateState}
+              lastResolution={game.lastResolution}
+            />
             <AdvisorChatPanel
               answer={advisorAnswer}
               factionId={currentHumanPlayer?.factionId ?? null}

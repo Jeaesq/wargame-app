@@ -43,6 +43,13 @@ export class MockTurnGenerationProvider implements TurnGenerationProvider {
       recommendedNextOptionIds: input.nextOptions
         .filter((candidate) => (candidate.recommendationPercent ?? 0) >= 60)
         .map((candidate) => candidate.id),
+      recommendedOptionNotes: input.nextOptions.slice(0, 3).map((candidate) => ({
+        optionId: candidate.id,
+        rationale:
+          candidate.effectProfile.worldTensionDelta <= 0
+            ? `${candidate.title} offers a lower-temperature way to protect position on the next turn.`
+            : `${candidate.title} stands out if the next actor wants visible leverage rather than caution.`
+      })),
       worldUpdateSuggestions: [
         {
           key: "worldTension",

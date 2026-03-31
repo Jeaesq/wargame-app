@@ -86,7 +86,11 @@ export function TurnActionForm({ game }: TurnActionFormProps) {
                 <span className="pill">{option.recommendationPercent ?? "n/a"}%</span>
               </div>
               <span>{option.summary}</span>
-              <span className="muted">{option.kind.replaceAll("_", " ")}</span>
+              <span className="muted">
+                {typeof option.metadata.presentationCategory === "string"
+                  ? option.metadata.presentationCategory
+                  : option.kind.replaceAll("_", " ")}
+              </span>
             </button>
           ))}
         </div>
@@ -95,6 +99,7 @@ export function TurnActionForm({ game }: TurnActionFormProps) {
             <strong>Selected option</strong>
             <p>{selectedOption.title}</p>
             <p className="muted">{selectedOption.summary}</p>
+            {selectedOption.detail ? <p className="muted">{selectedOption.detail}</p> : null}
           </div>
         ) : (
           <p className="muted">Select one option before confirming your turn.</p>

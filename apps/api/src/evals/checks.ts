@@ -55,6 +55,7 @@ function combineTurnText(payload: TurnGenerationArtifacts): string {
       ...payload.effects,
       ...payload.recommendationLabels,
       ...payload.riskLabels,
+      ...payload.recommendedOptionNotes.map((note) => note.rationale),
       ...payload.privateSummaries.map((summary) => summary.summary),
       ...payload.llmNarrative.privateUpdates.map((update) => update.summary)
     ].join(" ")
@@ -225,6 +226,9 @@ export function evaluateTurnArtifacts(
   const invalidRecommendedIds = payload.recommendedNextOptionIds.filter(
     (optionId) => !allowedNextOptionIds.has(optionId)
   );
+  const invalidRecommendedNotes = payload.recommendedOptionNotes.filter(
+    (note) => !allowedNextOptionIds.has(note.optionId)
+  );
 
   if (invalidRecommendedIds.length > 0) {
     findings.push(
@@ -233,6 +237,17 @@ export function evaluateTurnArtifacts(
         "deterministic",
         fixture.id,
         `recommendedNextOptionIds must stay inside visible next options. Invalid ids: ${invalidRecommendedIds.join(", ")}`
+      )
+    );
+  }
+
+  if (invalidRecommendedNotes.length > 0) {
+    findings.push(
+      createFinding(
+        "error",
+        "deterministic",
+        fixture.id,
+        "recommendedOptionNotes must stay inside visible next options."
       )
     );
   }
@@ -304,6 +319,17 @@ export function evaluateTurnArtifacts(
         "qualitative",
         fixture.id,
         "Turn narration does not clearly reference scenario-specific terms."
+      )
+    );
+  }
+
+  if (payload.recommendedOptionNotes.some((note) => note.rationale.length > 220)) {
+    findings.push(
+      createFinding(
+        "warn",
+        "qualitative",
+        fixture.id,
+        "recommendedOptionNotes should stay concise and gameplay-usable."
       )
     );
   }

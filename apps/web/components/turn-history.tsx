@@ -9,6 +9,10 @@ export function TurnHistory({ turns }: TurnHistoryProps) {
     (left, right) => right.turnNumber - left.turnNumber
   );
 
+  function formatSignedDelta(value: number) {
+    return `${value >= 0 ? "+" : ""}${value}`;
+  }
+
   return (
     <section className="panel history-panel">
       <div className="panel__header">
@@ -42,8 +46,16 @@ export function TurnHistory({ turns }: TurnHistoryProps) {
               ) : null}
             </div>
             <p className="highlight">{turn.llmNarrative.headline}</p>
-            <p>{turn.publicSummary}</p>
-            <p className="muted">{turn.llmNarrative.publicSummary}</p>
+            <div className="split">
+              <div>
+                <h3>Public developments</h3>
+                <p>{turn.publicSummary}</p>
+              </div>
+              <div>
+                <h3>Why it changed</h3>
+                <p className="muted">{turn.llmNarrative.publicSummary}</p>
+              </div>
+            </div>
             {turn.sessionOutcome?.status === "ended" ? (
               <>
                 <p className="highlight">{turn.sessionOutcome.title}</p>
@@ -52,7 +64,7 @@ export function TurnHistory({ turns }: TurnHistoryProps) {
             ) : null}
             <div className="history-grid">
               <div>
-                <h3>State Changes</h3>
+                <h3>Key shifts</h3>
                 <ul className="list">
                   {turn.stateChanges.map((change) => (
                     <li className="list-item" key={`${turn.id}-${change.key}`}>
@@ -64,7 +76,20 @@ export function TurnHistory({ turns }: TurnHistoryProps) {
                 </ul>
               </div>
               <div>
-                <h3>Labels</h3>
+                <h3>Risk and posture</h3>
+                {turn.stateChanges.some((change) => change.key === "escalationRiskPercent") ? (
+                  <p className="muted">
+                    {(() => {
+                      const riskChange = turn.stateChanges.find(
+                        (change) => change.key === "escalationRiskPercent"
+                      );
+
+                      return riskChange
+                        ? `Escalation risk moved ${formatSignedDelta(riskChange.delta)} to ${riskChange.newValue}.`
+                        : "";
+                    })()}
+                  </p>
+                ) : null}
                 <div className="inline-meta">
                   {turn.recommendationLabels.map((label) => (
                     <span className="pill" key={`${turn.id}-${label}`}>
@@ -77,6 +102,19 @@ export function TurnHistory({ turns }: TurnHistoryProps) {
                     </span>
                   ))}
                 </div>
+                {turn.effects.length ? (
+                  <>
+                    <div className="subtle-divider" />
+                    <h3>Effects</h3>
+                    <ul className="list">
+                      {turn.effects.slice(0, 3).map((effect) => (
+                        <li className="list-item" key={`${turn.id}-${effect}`}>
+                          {effect}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : null}
               </div>
             </div>
           </li>

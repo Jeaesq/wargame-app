@@ -1,6 +1,7 @@
 import { gameSchema, type Game, type GameMode, type ScenarioDefinition } from "@wargame/shared";
 import { randomUUID } from "node:crypto";
 import { ValidationError } from "../errors/app-error.js";
+import { buildAvailableOptions } from "./option-presentation-service.js";
 
 type RequestedPlayer = {
   name: string;
@@ -88,9 +89,30 @@ export function buildGameFromScenario(input: BuildGameFromScenarioInput): Game {
 
   const gameId = randomUUID();
   const currentFactionId = players.find((player) => player.factionId)?.factionId ?? null;
-  const availableOptions = scenario.openingState.initialOptions.filter(
-    (option) => option.factionId === currentFactionId
-  );
+  const openingDerivedState = {
+    ...scenario.openingState.derivedState,
+    gameId,
+    turnNumber: scenario.startingTurn,
+    actingPlayerIds: [],
+    legalActionIds: [],
+    recommendedActionIds: []
+  };
+  const availableOptions = buildAvailableOptions({
+    scenario,
+    factionId: currentFactionId,
+    publicState: {
+      worldTension: scenario.openingState.publicState.worldTension,
+      visibleTracks: scenario.openingState.publicState.visibleTracks
+    },
+    derivedState: {
+      escalationRiskPercent: scenario.openingState.derivedState.escalationRiskPercent,
+      negotiationLeverage: scenario.openingState.derivedState.negotiationLeverage,
+      factionMomentum: scenario.openingState.derivedState.factionMomentum,
+      outcome: openingDerivedState.outcome
+    },
+    targetGameLength,
+    limit: 4
+  });
 
   const privatePlayerStates = players
     .filter((player) => player.factionId)

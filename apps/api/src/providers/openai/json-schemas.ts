@@ -18,6 +18,7 @@ export const turnGenerationArtifactsJsonSchema = createStrictObjectJsonSchema({
     "recommendationLabels",
     "riskLabels",
     "recommendedNextOptionIds",
+    "recommendedOptionNotes",
     "worldUpdateSuggestions",
     "llmNarrative",
     "metadata"
@@ -54,6 +55,16 @@ export const turnGenerationArtifactsJsonSchema = createStrictObjectJsonSchema({
     recommendedNextOptionIds: {
       type: "array",
       items: { type: "string" }
+    },
+    recommendedOptionNotes: {
+      type: "array",
+      items: createStrictObjectJsonSchema({
+        required: ["optionId", "rationale"],
+        properties: {
+          optionId: { type: "string" },
+          rationale: { type: "string" }
+        }
+      })
     },
     worldUpdateSuggestions: {
       type: "array",

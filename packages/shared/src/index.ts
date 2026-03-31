@@ -284,6 +284,11 @@ export const privateTurnSummarySchema = z.object({
   tags: tagsSchema
 });
 
+export const recommendedOptionNoteSchema = z.object({
+  optionId: z.string().min(1),
+  rationale: z.string().min(1)
+});
+
 export const turnGenerationArtifactsSchema = z.object({
   publicSummary: z.string().min(1),
   privateSummaries: z.array(privateTurnSummarySchema).default([]),
@@ -291,6 +296,7 @@ export const turnGenerationArtifactsSchema = z.object({
   recommendationLabels: tagsSchema,
   riskLabels: tagsSchema,
   recommendedNextOptionIds: z.array(z.string()).default([]),
+  recommendedOptionNotes: z.array(recommendedOptionNoteSchema).default([]),
   worldUpdateSuggestions: z.array(worldUpdateSuggestionSchema).default([]),
   llmNarrative: llmNarrativeUpdateSchema,
   metadata: metadataSchema
@@ -504,6 +510,7 @@ export type ScenarioObjective = z.infer<typeof scenarioObjectiveSchema>;
 export type SessionOutcome = z.infer<typeof sessionOutcomeSchema>;
 export type SessionOutcomePressure = z.infer<typeof sessionOutcomePressureSchema>;
 export type TurnGenerationArtifacts = z.infer<typeof turnGenerationArtifactsSchema>;
+export type RecommendedOptionNote = z.infer<typeof recommendedOptionNoteSchema>;
 export type WorldUpdateSuggestion = z.infer<typeof worldUpdateSuggestionSchema>;
 export type BotDecisionPayload = z.infer<typeof botDecisionPayloadSchema>;
 export type AdvisorResponsePayload = z.infer<typeof advisorResponsePayloadSchema>;

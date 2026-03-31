@@ -676,6 +676,12 @@ export function createImplausibleTurnCandidate(
     recommendationLabels: ["generic"],
     riskLabels: [],
     recommendedNextOptionIds: ["option-not-visible"],
+    recommendedOptionNotes: [
+      {
+        optionId: "option-not-visible",
+        rationale: "A generic hidden recommendation."
+      }
+    ],
     worldUpdateSuggestions: [
       {
         key: "worldTension",

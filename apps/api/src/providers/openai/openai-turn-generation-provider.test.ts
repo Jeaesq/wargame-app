@@ -290,6 +290,7 @@ test("OpenAI turn provider returns validated structured turn artifacts", async (
         recommendationLabels: ["measured"],
         riskLabels: ["medium-escalation-risk"],
         recommendedNextOptionIds: [],
+        recommendedOptionNotes: [],
         worldUpdateSuggestions: [
           {
             key: "worldTension",
@@ -329,6 +330,7 @@ test("OpenAI turn provider falls back to mock artifacts on provider errors", asy
         recommendationLabels: ["situational"],
         riskLabels: ["measured-risk"],
         recommendedNextOptionIds: [],
+        recommendedOptionNotes: [],
         worldUpdateSuggestions: [],
         llmNarrative: {
           headline: "Fallback headline",

@@ -310,6 +310,12 @@ test("turn resolution service keeps private artifacts scoped to the acting facti
           recommendationLabels: ["measured"],
           riskLabels: ["medium-escalation-risk"],
           recommendedNextOptionIds: ["option-2"],
+          recommendedOptionNotes: [
+            {
+              optionId: "option-2",
+              rationale: "Signal restraint is safer now that pressure is already rising."
+            }
+          ],
           worldUpdateSuggestions: [],
           llmNarrative: {
             headline: "Turn 1: Expand the airlift",
@@ -391,6 +397,7 @@ test("turn resolution provider receives canonical and projected visibility views
           recommendationLabels: ["measured"],
           riskLabels: ["medium-escalation-risk"],
           recommendedNextOptionIds: ["option-2"],
+          recommendedOptionNotes: [],
           worldUpdateSuggestions: [],
           llmNarrative: {
             headline: "Turn 1: Expand the airlift",

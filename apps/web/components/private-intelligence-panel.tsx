@@ -1,11 +1,13 @@
-import type { PrivatePlayerState } from "@wargame/shared";
+import type { PrivatePlayerState, TurnResolution } from "@wargame/shared";
 
 type PrivateIntelligencePanelProps = {
   privateState: PrivatePlayerState | null;
+  lastResolution?: TurnResolution | null;
 };
 
 export function PrivateIntelligencePanel({
-  privateState
+  privateState,
+  lastResolution
 }: PrivateIntelligencePanelProps) {
   if (!privateState) {
     return (
@@ -16,6 +18,8 @@ export function PrivateIntelligencePanel({
     );
   }
 
+  const recentUpdates = lastResolution?.privateSummaries.map((summary) => summary.summary) ?? [];
+
   return (
     <section className="panel">
       <div className="panel__header">
@@ -23,6 +27,20 @@ export function PrivateIntelligencePanel({
         <span className="pill">{privateState.factionId}</span>
       </div>
       <p className="highlight">{privateState.privateBriefing}</p>
+      {recentUpdates.length ? (
+        <>
+          <h3>Latest update</h3>
+          <ul className="list">
+            {recentUpdates.map((item) => (
+              <li className="list-item" key={item}>
+                {item}
+              </li>
+            ))}
+          </ul>
+          <div className="subtle-divider" />
+        </>
+      ) : null}
+      <h3>Standing intelligence</h3>
       <ul className="list">
         {privateState.intelligence.map((item) => (
           <li className="list-item" key={item}>

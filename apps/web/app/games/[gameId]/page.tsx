@@ -6,6 +6,7 @@ import { PageHeader } from "../../../components/page-header";
 import { PrivateIntelligencePanel } from "../../../components/private-intelligence-panel";
 import { PublicStatePanel } from "../../../components/public-state-panel";
 import { ScenarioBriefing } from "../../../components/scenario-briefing";
+import { SessionOverviewSummary } from "../../../components/session-overview-summary";
 import { SessionAccessPanel } from "../../../components/session-access-panel";
 import { TurnHistory } from "../../../components/turn-history";
 import { getGame, getScenarios, getTurnHistory } from "../../../lib/api";
@@ -98,6 +99,11 @@ export default async function GameDetailPage({
                 </div>
               </section>
               {scenario ? <ScenarioBriefing game={game} scenario={scenario} /> : null}
+              <SessionOverviewSummary
+                game={game}
+                privateState={privateState}
+                factionLabels={factionLabels}
+              />
               <PublicStatePanel game={game} />
               <DerivedStatePanel
                 derivedState={game.state.derived}
@@ -110,7 +116,10 @@ export default async function GameDetailPage({
             </section>
           </div>
           <div className="section-stack">
-            <PrivateIntelligencePanel privateState={privateState} />
+            <PrivateIntelligencePanel
+              privateState={privateState}
+              lastResolution={game.lastResolution}
+            />
             <AdvisorChatPanel
               answer={advisorAnswer}
               factionId={currentHumanPlayer?.factionId ?? null}
