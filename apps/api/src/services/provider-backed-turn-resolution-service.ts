@@ -11,8 +11,10 @@ import { ValidationError } from "../errors/app-error.js";
 import { logInfo } from "../logger.js";
 import type { TurnGenerationProvider } from "../providers/types.js";
 import { projectSessionForSelection } from "../repositories/session-visibility-projection.js";
+import { buildFactionStrategicSnapshot } from "./faction-strategy-context.js";
 import { recordOptionUsageInPrivateStateMetadata } from "./legal-option-service.js";
 import { buildAvailableOptions } from "./option-presentation-service.js";
+import { evolvePrivateStatesAfterAction } from "./private-state-evolution-service.js";
 import { generateSessionScopedId } from "./session-debug-service.js";
 import { evaluateSessionOutcome } from "./session-outcome-service.js";
 import type {
@@ -102,6 +104,117 @@ function findPrivateStateForFaction(game: Game, factionId: string | null) {
   return game.state.privateByPlayer.find((state) => state.factionId === factionId) ?? null;
 }
 
+function findPrivateStateInCollection(
+  privateStates: Game["state"]["privateByPlayer"],
+  factionId: string | null
+) {
+  if (!factionId) {
+    return null;
+  }
+
+  return privateStates.find((state) => state.factionId === factionId) ?? null;
+}
+
+function getFactionName(game: Game, factionId: string | null) {
+  return game.factions.find((faction) => faction.id === factionId)?.name ?? factionId ?? "Unknown faction";
+}
+
+function buildPrivateBriefing(input: {
+  state: Game["state"]["privateByPlayer"][number];
+  game: Game;
+  scenario: ResolveTurnInput["scenario"];
+  selectedOption: ChoiceOption;
+  actionFactionId: string;
+  nextFactionId: string | null;
+  nextWorldTension: number;
+  escalationRisk: number;
+  outcome: Game["state"]["derived"]["outcome"];
+  isCompleted: boolean;
+}) {
+  if (input.isCompleted) {
+    return input.outcome.summary ?? input.state.privateBriefing;
+  }
+
+  const snapshot = buildFactionStrategicSnapshot({
+    scenario: input.scenario,
+    game: input.game,
+    factionId: input.state.factionId
+  });
+  const actingFactionName = getFactionName(input.game, input.actionFactionId);
+  const nextFactionName = getFactionName(input.game, input.nextFactionId);
+  const ownProgress = snapshot.ownProgress;
+  const rivalProgress = snapshot.rivalProgress;
+
+  if (input.state.factionId === input.actionFactionId) {
+    return `${actingFactionName} just executed ${input.selectedOption.title}. Public tension is now ${input.nextWorldTension}% and escalation risk is ${input.escalationRisk}%. Your visible objective pressure is ${ownProgress}% against ${rivalProgress}% for the rival, so the next exchange should follow a ${snapshot.doctrine.doctrineLabel} approach rather than drift into reactive play.`;
+  }
+
+  if (input.state.factionId === input.nextFactionId) {
+    return `${nextFactionName} now faces the next decision window after ${actingFactionName} chose ${input.selectedOption.title}. Public tension is ${input.nextWorldTension}% with escalation risk at ${input.escalationRisk}%, so this is a moment to apply ${snapshot.doctrine.doctrineLabel} instead of making a generic reply.`;
+  }
+
+  return `${input.scenario.title} remains unresolved. ${actingFactionName}'s latest move changed the public balance, and ${nextFactionName} now controls the next choice.`;
+}
+
+function buildPrivateIntelligence(input: {
+  state: Game["state"]["privateByPlayer"][number];
+  game: Game;
+  scenario: ResolveTurnInput["scenario"];
+  selectedOption: ChoiceOption;
+  actionFactionId: string;
+  nextFactionId: string | null;
+  nextWorldTension: number;
+  escalationRisk: number;
+  outcome: Game["state"]["derived"]["outcome"];
+  nextVisibleTracks: Record<string, number>;
+  isCompleted: boolean;
+}) {
+  if (input.isCompleted) {
+    return input.state.intelligence;
+  }
+
+  const snapshot = buildFactionStrategicSnapshot({
+    scenario: input.scenario,
+    game: input.game,
+    factionId: input.state.factionId
+  });
+  const ownProgress = snapshot.ownProgress;
+  const rivalProgress = snapshot.rivalProgress;
+  const pressureTrend =
+    input.nextVisibleTracks.diplomaticPressure !== undefined
+      ? `Diplomatic pressure now sits at ${input.nextVisibleTracks.diplomaticPressure}%.`
+      : `Military posture now sits at ${input.nextVisibleTracks.militaryPosture ?? 0}%.`;
+  const postureLine =
+    input.escalationRisk >= 70
+      ? "The crisis is close to punishing any overt overreach."
+      : input.nextWorldTension <= 50
+        ? "There is still room for a calibrated move before the confrontation fully locks up."
+        : "The crisis remains active enough for initiative to matter.";
+
+  if (input.state.factionId === input.nextFactionId) {
+    return [
+      `${getFactionName(input.game, input.actionFactionId)} just created a new decision problem with ${input.selectedOption.title}.`,
+      `${pressureTrend} ${postureLine}`,
+      `Your doctrine favors ${snapshot.doctrine.doctrineLabel}, so prefer categories like ${snapshot.doctrine.preferredCategories.join(", ")} before defaulting to raw escalation.`,
+      `Visible objective pressure is ${ownProgress}% for your side versus ${rivalProgress}% for the rival.`
+    ];
+  }
+
+  if (input.state.factionId === input.actionFactionId) {
+    return [
+      `${input.selectedOption.title} is now shaping the public board at ${input.nextWorldTension}% world tension.`,
+      `${pressureTrend} Escalation risk is ${input.escalationRisk}%.`,
+      `The move aligned with a ${snapshot.doctrine.doctrineLabel} posture and should be judged against that doctrine, not just the raw track deltas.`,
+      `Your side's visible objective pressure is ${ownProgress}% against ${rivalProgress}% for the rival.`
+    ];
+  }
+
+  return [
+    `${getFactionName(input.game, input.nextFactionId)} controls the next move.`,
+    `${pressureTrend} Escalation risk is ${input.escalationRisk}%.`
+  ];
+}
+
 function getNextFactionInOrder(game: Game, actingFactionId: string): string | null {
   const playableFactionOrder = game.players
     .map((player) => player.factionId)
@@ -175,6 +288,14 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
       optionId: prepared.selectedOption.id,
       roundNumber: prepared.roundNumber
     });
+    const evolvedPrivateStates = evolvePrivateStatesAfterAction({
+      game: input.game,
+      scenario: input.scenario,
+      actingFactionId: input.action.factionId,
+      selectedOption: prepared.selectedOption,
+      nextWorldTension: prepared.nextWorldTension,
+      escalationRisk
+    });
     const curatedNextOptions = buildAvailableOptions({
       scenario: input.scenario,
       factionId: prepared.nextFactionId,
@@ -184,7 +305,7 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
         publicFlags: nextPublicFlags,
         revealedEvents: nextRevealedEvents
       },
-      privateState: findPrivateStateForFaction(input.game, prepared.nextFactionId),
+      privateState: findPrivateStateInCollection(evolvedPrivateStates, prepared.nextFactionId),
       derivedState: {
         escalationRiskPercent: escalationRisk,
         negotiationLeverage: nextNegotiationLeverage,
@@ -346,6 +467,7 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
       nextVisibleTracks,
       nextPublicFlags,
       nextRevealedEvents,
+      evolvedPrivateStates,
       nextActingPrivateMetadata,
       nextNegotiationLeverage,
       nextFactionMomentum,
@@ -453,6 +575,7 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
     nextVisibleTracks: Record<string, number>;
     nextPublicFlags: string[];
     nextRevealedEvents: string[];
+    evolvedPrivateStates: Game["state"]["privateByPlayer"];
     nextActingPrivateMetadata: Record<string, unknown>;
     nextNegotiationLeverage: Record<string, number>;
     nextFactionMomentum: Record<string, number>;
@@ -473,7 +596,10 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
               publicFlags: input.nextPublicFlags,
               revealedEvents: input.nextRevealedEvents
             },
-            privateState: findPrivateStateForFaction(game, nextFactionId),
+            privateState: findPrivateStateInCollection(
+              input.evolvedPrivateStates,
+              nextFactionId
+            ),
             derivedState: {
               escalationRiskPercent: input.escalationRisk,
               negotiationLeverage: input.nextNegotiationLeverage,
@@ -513,28 +639,38 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
           revealedEvents: input.nextRevealedEvents,
           updatedAt: prepared.resolvedAt
         },
-        privateByPlayer: game.state.privateByPlayer.map((state) => ({
+        privateByPlayer: input.evolvedPrivateStates.map((state) => ({
           ...state,
           turnNumber: prepared.nextTurnNumber,
           metadata:
             state.playerId === prepared.actingPlayer.id
               ? input.nextActingPrivateMetadata
               : state.metadata,
-          privateBriefing:
+          privateBriefing: buildPrivateBriefing({
+            state,
+            game,
+            scenario,
+            selectedOption: prepared.selectedOption,
+            actionFactionId: input.actionFactionId,
+            nextFactionId: prepared.nextFactionId,
+            nextWorldTension: prepared.nextWorldTension,
+            escalationRisk: input.escalationRisk,
+            outcome: input.sessionOutcome,
             isCompleted
-              ? input.sessionOutcome.summary ?? state.privateBriefing
-              : state.factionId === prepared.nextFactionId
-              ? `Prepare for the next move. ${scenario.title} remains unresolved.`
-              : state.factionId === input.actionFactionId
-                ? `Post-action assessment: ${prepared.selectedOption.title} increased pressure and drew fresh scrutiny.`
-                : state.privateBriefing,
-          intelligence:
-            !isCompleted && state.factionId === prepared.nextFactionId
-              ? [
-                  `Placeholder intelligence: ${prepared.nextFactionId} now faces the next decision window.`,
-                  `Current world tension stands at ${prepared.nextWorldTension}%.`
-                ]
-              : state.intelligence,
+          }),
+          intelligence: buildPrivateIntelligence({
+            state,
+            game,
+            scenario,
+            selectedOption: prepared.selectedOption,
+            actionFactionId: input.actionFactionId,
+            nextFactionId: prepared.nextFactionId,
+            nextWorldTension: prepared.nextWorldTension,
+            escalationRisk: input.escalationRisk,
+            outcome: input.sessionOutcome,
+            nextVisibleTracks: input.nextVisibleTracks,
+            isCompleted
+          }),
           availableOptions:
             !isCompleted && state.factionId === prepared.nextFactionId ? nextAvailableOptions : []
         })),

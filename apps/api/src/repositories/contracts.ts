@@ -5,6 +5,7 @@ import type {
   ScenarioDefinition,
   TurnResolution
 } from "@wargame/shared";
+import type { VisibleStrategicAssessment } from "../services/faction-strategy-context.js";
 
 export type SessionViewSelection = {
   playerId?: string;
@@ -41,10 +42,15 @@ export type AdvisorVisibleContext = {
   turnNumber: number;
   factionId: string | null;
   playerId?: string;
+  likelyOpponentFactionId: string | null;
   publicState: Game["state"]["public"];
   visibleOutcome: Game["state"]["derived"]["outcome"];
   visibleOptions: ChoiceOption[];
   visibleWarnings: string[];
+  privateBriefing: string | null;
+  visibleIntelligence: string[];
+  strategicAssessment: VisibleStrategicAssessment | null;
+  likelyOpponentAssessment: VisibleStrategicAssessment | null;
   lastAdvisorAnswer: AdvisorAnswer | null;
 };
 

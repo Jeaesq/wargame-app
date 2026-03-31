@@ -97,16 +97,20 @@ Unlocks
 - better advisor context
 
 ### Phase 3: Opponent strategy and private-state quality
-Status: pending
+Status: completed
 
 Goal
 - make the AI feel like an opponent rather than a mirror of current recommendation scoring
 
 Concrete steps
-1. Replace simple top-ranked-option bot behavior with strategy logic that considers objectives, risk appetite, hidden state, and tempo.
-2. Improve backend-owned private briefings and intelligence updates so solo information feels coherent after each exchange.
-3. Keep provider-backed bot output advisory and constrained to backend-legal actions.
-4. Add tests proving the AI can choose different actions under different canonical states.
+1. Replace simple top-ranked-option bot behavior with strategy logic that considers objectives, risk appetite, hidden state, and tempo. Completed for the current solo foundation with deterministic backend heuristic scoring driving bot choice instead of raw recommendation rank.
+   Current slice now includes faction-doctrine context so different sides can prefer different categories under the same public pressure.
+   Scenario-authored faction strategy profiles now shape that doctrine layer directly, so Berlin and Suez can push distinct bot and advisor behavior without adding new service-level branching.
+2. Improve backend-owned private briefings and intelligence updates so solo information feels coherent after each exchange. Completed for the current solo foundation with deterministic faction-aware briefing and intelligence updates replacing placeholder text.
+   Current slice now reuses the same backend doctrine snapshot in bot rationale, private briefing, intelligence summaries, and advisor-visible strategic context so the opponent and solo information model feel like one system.
+   Scenario-authored private-state evolution now updates hidden tracks and secret flags before next-option generation, so solo private pressure changes are no longer mostly static after setup.
+3. Keep provider-backed bot output advisory and constrained to backend-legal actions. Completed for the current slice: provider input now acts as a weak advisory overlay, and backend heuristics remain authoritative.
+4. Add tests proving the AI can choose different actions under different canonical states. Completed for the current slice, including doctrine-sensitive bot expectations, scenario-profile overrides, advisor-context coverage, and private-state evolution checks.
 
 Depends on
 - Phase 2

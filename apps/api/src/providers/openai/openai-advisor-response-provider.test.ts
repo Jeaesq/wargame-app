@@ -106,6 +106,7 @@ const context: AdvisorVisibleContext = {
   turnNumber: 1,
   factionId: "faction-usa",
   playerId: "player-1",
+  likelyOpponentFactionId: "faction-ussr",
   publicState: {
     gameId: "game-1",
     scenarioId: "scenario-cold-war-berlin-mvp",
@@ -157,6 +158,34 @@ const context: AdvisorVisibleContext = {
     }
   ],
   visibleWarnings: ["Public resolve is being tested."],
+  privateBriefing: "Hold access while avoiding a direct clash.",
+  visibleIntelligence: ["Soviet pressure is steady but not yet absolute."],
+  strategicAssessment: {
+    doctrineLabel: "measured resolve",
+    preferredCategories: ["diplomatic", "intelligence"],
+    cautiousCategories: ["military"],
+    scenarioFocus: "superpower signaling and allied credibility in Berlin",
+    ownObjectivePressure: 50,
+    rivalObjectivePressure: 50,
+    escalationRiskPercent: 55,
+    worldTension: 58,
+    strategicPosture: "contest",
+    visiblePriority:
+      "The visible contest is still balanced, so measured resolve should guide which legal pressure you apply next."
+  },
+  likelyOpponentAssessment: {
+    doctrineLabel: "coercive leverage below the threshold of war",
+    preferredCategories: ["economic", "military", "diplomatic"],
+    cautiousCategories: ["military"],
+    scenarioFocus: "pressure, ambiguity, and bargaining leverage in Berlin",
+    ownObjectivePressure: 50,
+    rivalObjectivePressure: 50,
+    escalationRiskPercent: 55,
+    worldTension: 58,
+    strategicPosture: "contest",
+    visiblePriority:
+      "Berlin still rewards coercive leverage, so sustained pressure should outpace Western reassurance without making the crisis obviously uncontrollable."
+  },
   lastAdvisorAnswer: null
 };
 

@@ -72,9 +72,83 @@ export function createColdWarMvpScenarioDefinition() {
         colorToken: "blue",
         isPlayable: true,
         metadata: {
-          optionRules: {
-            oncePerGame: true,
-            requiredPublicFlags: ["berlin-crisis"]
+          strategyProfile: {
+            doctrineLabel: "measured resolve under allied scrutiny",
+            preferredCategories: ["diplomatic", "intelligence", "military"],
+            cautiousCategories: ["military"],
+            categoryBiases: {
+              diplomatic: 3,
+              intelligence: 5,
+              military: 1
+            },
+            pressureBias: 2,
+            restraintBias: 9,
+            initiativeBias: 4,
+            scenarioFocus: "superpower signaling and allied credibility in Berlin",
+            contestedPriority:
+              "Berlin remains a test of credibility, so measured resolve should keep allied confidence high without drifting into automatic military escalation.",
+            recoveryPriority:
+              "Visible pressure is slipping in Berlin, so the next move should recover leverage through legitimacy and signaling before the corridor question hardens further.",
+            protectionPriority:
+              "The coalition is visibly ahead, so protect allied credibility in Berlin without giving Moscow an easy escalation narrative.",
+            escalationPriority:
+              "Escalation around Berlin is nearing the line where even symbolic overreach could become strategic self-harm, so controlled signaling now matters more than bravado."
+          },
+          privateStateProfile: {
+            defaultActingTrackDeltas: {
+              allianceConfidence: 1
+            },
+            defaultReactingTrackDeltas: {
+              domesticPressure: 1
+            },
+            actingTrackDeltasByCategory: {
+              diplomatic: {
+                allianceConfidence: 2,
+                domesticPressure: -1
+              },
+              intelligence: {
+                allianceConfidence: 1,
+                domesticPressure: -2
+              },
+              military: {
+                allianceConfidence: 2,
+                domesticPressure: 3
+              }
+            },
+            reactingTrackDeltasByCategory: {
+              economic: {
+                allianceConfidence: -2,
+                domesticPressure: 1
+              },
+              military: {
+                allianceConfidence: -3,
+                domesticPressure: 2
+              }
+            },
+            actingFlagAddsByCategory: {
+              intelligence: ["backchannel-open"],
+              military: ["hawks-alert"]
+            },
+            highTensionTrackDeltas: {
+              acting: {
+                domesticPressure: 2
+              },
+              reacting: {
+                domesticPressure: 2
+              }
+            },
+            thresholdRules: [
+              {
+                track: "allianceConfidence",
+                min: 65,
+                addFlags: ["alliance-solidifying"]
+              },
+              {
+                track: "domesticPressure",
+                min: 58,
+                addFlags: ["hawks-alert"]
+              }
+            ]
           }
         }
       },
@@ -91,9 +165,82 @@ export function createColdWarMvpScenarioDefinition() {
         colorToken: "red",
         isPlayable: true,
         metadata: {
-          optionRules: {
-            oncePerGame: true,
-            maxWorldTension: 72
+          strategyProfile: {
+            doctrineLabel: "coercive leverage below the threshold of war",
+            preferredCategories: ["economic", "military", "diplomatic"],
+            cautiousCategories: ["military"],
+            categoryBiases: {
+              economic: 5,
+              military: 2,
+              diplomatic: 1
+            },
+            pressureBias: 10,
+            restraintBias: 2,
+            initiativeBias: 8,
+            scenarioFocus: "pressure, ambiguity, and bargaining leverage in Berlin",
+            contestedPriority:
+              "Berlin still rewards coercive leverage, so sustained pressure should outpace Western reassurance without making the crisis obviously uncontrollable.",
+            recoveryPriority:
+              "If leverage is slipping in Berlin, the next move should reopen ambiguity and bargaining pressure before the West locks in a stable coalition response.",
+            protectionPriority:
+              "With pressure already landing, keep the initiative in Berlin by preserving ambiguity instead of forcing a crisis spike that invites unified resistance.",
+            escalationPriority:
+              "Berlin is close to punishing overt overreach, so preserving coercive leverage now matters more than visibly maximal threats."
+          },
+          privateStateProfile: {
+            defaultActingTrackDeltas: {
+              pressureWindow: 1
+            },
+            defaultReactingTrackDeltas: {
+              commandConfidence: -1
+            },
+            actingTrackDeltasByCategory: {
+              economic: {
+                pressureWindow: 4,
+                commandConfidence: 1
+              },
+              diplomatic: {
+                commandConfidence: 2
+              },
+              military: {
+                pressureWindow: 3,
+                commandConfidence: -2
+              }
+            },
+            reactingTrackDeltasByCategory: {
+              diplomatic: {
+                pressureWindow: -1,
+                commandConfidence: 1
+              },
+              military: {
+                pressureWindow: -2,
+                commandConfidence: -2
+              }
+            },
+            actingFlagAddsByCategory: {
+              economic: ["pressure-advantage"],
+              military: ["escalatory-window"]
+            },
+            highTensionTrackDeltas: {
+              acting: {
+                commandConfidence: -2
+              },
+              reacting: {
+                commandConfidence: -1
+              }
+            },
+            thresholdRules: [
+              {
+                track: "pressureWindow",
+                min: 70,
+                addFlags: ["pressure-advantage"]
+              },
+              {
+                track: "commandConfidence",
+                max: 45,
+                addFlags: ["command-strain"]
+              }
+            ]
           }
         }
       }

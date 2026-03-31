@@ -59,7 +59,32 @@ const scenario: ScenarioDefinition = {
       publicTraits: ["airlift"],
       privateTraits: ["intelligence"],
       isPlayable: true,
-      metadata: {}
+      metadata: {
+        privateStateProfile: {
+          defaultActingTrackDeltas: {
+            allianceConfidence: 1
+          },
+          defaultReactingTrackDeltas: {
+            domesticPressure: 1
+          },
+          actingTrackDeltasByCategory: {
+            diplomatic: {
+              allianceConfidence: 2,
+              domesticPressure: -1
+            }
+          },
+          actingFlagAddsByCategory: {
+            diplomatic: ["backchannel-open"]
+          },
+          thresholdRules: [
+            {
+              track: "allianceConfidence",
+              min: 65,
+              addFlags: ["alliance-solidifying"]
+            }
+          ]
+        }
+      }
     },
     {
       id: "faction-ussr",
@@ -72,7 +97,26 @@ const scenario: ScenarioDefinition = {
       publicTraits: ["pressure"],
       privateTraits: ["countermove"],
       isPlayable: true,
-      metadata: {}
+      metadata: {
+        privateStateProfile: {
+          defaultReactingTrackDeltas: {
+            commandConfidence: -1
+          },
+          reactingTrackDeltasByCategory: {
+            diplomatic: {
+              pressureWindow: -1,
+              commandConfidence: 1
+            }
+          },
+          thresholdRules: [
+            {
+              track: "commandConfidence",
+              max: 45,
+              addFlags: ["command-strain"]
+            }
+          ]
+        }
+      }
     }
   ],
   openingState: {
@@ -197,7 +241,10 @@ const game: Game = {
         turnNumber: 1,
         privateBriefing: "Hold access routes.",
         intelligence: ["Pressure remains high."],
-        hiddenTracks: {},
+        hiddenTracks: {
+          allianceConfidence: 63,
+          domesticPressure: 48
+        },
         secretFlags: ["airlift-ready"],
         availableOptions: [
           {
@@ -224,7 +271,10 @@ const game: Game = {
         turnNumber: 1,
         privateBriefing: "Sustain pressure.",
         intelligence: [],
-        hiddenTracks: {},
+        hiddenTracks: {
+          commandConfidence: 46,
+          pressureWindow: 52
+        },
         secretFlags: [],
         availableOptions: [],
         metadata: {}
@@ -378,6 +428,18 @@ test("turn resolution service keeps private artifacts scoped to the acting facti
   ]);
   assert.deepEqual(result.updatedGame.state.derived.recommendedActionIds, ["option-2"]);
   assert.equal(result.updatedGame.state.derived.outcome.status, "ongoing");
+  const updatedUsaState = result.updatedGame.state.privateByPlayer.find(
+    (state) => state.factionId === "faction-usa"
+  );
+  const updatedUssrState = result.updatedGame.state.privateByPlayer.find(
+    (state) => state.factionId === "faction-ussr"
+  );
+  assert.equal(updatedUsaState?.hiddenTracks.allianceConfidence, 66);
+  assert.equal(updatedUsaState?.hiddenTracks.domesticPressure, 47);
+  assert.equal(updatedUsaState?.secretFlags.includes("backchannel-open"), true);
+  assert.equal(updatedUsaState?.secretFlags.includes("alliance-solidifying"), true);
+  assert.equal(updatedUssrState?.hiddenTracks.commandConfidence, 46);
+  assert.equal(updatedUssrState?.hiddenTracks.pressureWindow, 51);
 });
 
 test("turn resolution provider receives canonical and projected visibility views", async () => {

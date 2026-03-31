@@ -1,9 +1,42 @@
 import { advisorResponsePayloadSchema } from "@wargame/shared";
 import { logInfo } from "../../logger.js";
+import { getStrategicCategory } from "../../services/faction-strategy-context.js";
 import type {
   AdvisorResponseProvider,
   AdvisorResponseProviderInput
 } from "../types.js";
+
+function getStrategicBonus(input: {
+  option: AdvisorResponseProviderInput["context"]["visibleOptions"][number];
+  assessment: AdvisorResponseProviderInput["context"]["strategicAssessment"];
+}) {
+  if (!input.assessment) {
+    return 0;
+  }
+
+  const category = getStrategicCategory(input.option);
+  let bonus = 0;
+
+  if (input.assessment.preferredCategories.includes(category)) {
+    bonus += 4;
+  }
+
+  if (
+    input.assessment.cautiousCategories.includes(category) &&
+    input.assessment.escalationRiskPercent >= 65
+  ) {
+    bonus -= 5;
+  }
+
+  if (
+    input.assessment.escalationRiskPercent >= 75 &&
+    input.option.effectProfile.worldTensionDelta <= 0
+  ) {
+    bonus += 6;
+  }
+
+  return bonus;
+}
 
 export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
   async generateAdvisorResponse(
@@ -16,10 +49,22 @@ export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
     });
 
     const normalizedQuestion = input.question.trim().toLowerCase();
-    const rankedOptions = [...input.context.visibleOptions].sort(
-      (left, right) =>
-        (right.recommendationPercent ?? 0) - (left.recommendationPercent ?? 0)
-    );
+    const rankedOptions = [...input.context.visibleOptions].sort((left, right) => {
+      const leftScore =
+        (left.recommendationPercent ?? 0) +
+        getStrategicBonus({
+          option: left,
+          assessment: input.context.strategicAssessment
+        });
+      const rightScore =
+        (right.recommendationPercent ?? 0) +
+        getStrategicBonus({
+          option: right,
+          assessment: input.context.strategicAssessment
+        });
+
+      return rightScore - leftScore;
+    });
     const topOption = rankedOptions[0];
     const publicState = input.context.publicState;
     const asksAboutRisk =
@@ -39,11 +84,22 @@ export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
       normalizedQuestion.includes("priority") ||
       normalizedQuestion.includes("focus");
     const visibleOutcome = input.context.visibleOutcome;
+    const strategicAssessment = input.context.strategicAssessment;
+    const doctrineLine = strategicAssessment
+      ? `Visible doctrine points toward ${strategicAssessment.doctrineLabel}.`
+      : "No doctrine-specific visible framing is available.";
+    const opponentLine = input.context.likelyOpponentAssessment
+      ? `The likely opposing posture points toward ${input.context.likelyOpponentAssessment.doctrineLabel}${input.context.likelyOpponentFactionId ? ` for ${input.context.likelyOpponentFactionId}` : ""}.`
+      : "No opponent posture can be inferred from the current visible state.";
+    const privateLine = input.context.privateBriefing
+      ? `Current private briefing: ${input.context.privateBriefing}`
+      : "No additional private briefing is available in this view.";
 
     let shortAnswer = "The visible situation remains manageable but tense.";
     let rationale = [
       `Public world tension is currently ${publicState.worldTension}%.`,
-      `There are ${input.context.visibleOptions.length} visible option(s) available from this perspective.`
+      `There are ${input.context.visibleOptions.length} visible option(s) available from this perspective.`,
+      doctrineLine
     ];
     let confidenceLabel: "low" | "medium" | "high" | "uncertain" = "medium";
     let summary =
@@ -63,6 +119,8 @@ export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
       summary = shortAnswer;
       rationale = [
         `World tension is ${publicState.worldTension}% based on public state.`,
+        doctrineLine,
+        opponentLine,
         "Recent public conditions indicate the next move will be interpreted as a signal of intent.",
         "This answer excludes hidden intelligence and uses only player-visible information."
       ];
@@ -83,6 +141,8 @@ export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
       rationale = [
         `Visible scenario maturity is ${visibleOutcome.pressure.maturityPercent}%.`,
         `Visible catastrophic risk is ${visibleOutcome.pressure.catastrophicRiskPercent}% and de-escalation opportunity is ${visibleOutcome.pressure.deescalationOpportunityPercent}%.`,
+        strategicAssessment?.visiblePriority ?? doctrineLine,
+        opponentLine,
         "The visible question is less about hidden intent and more about whether the next move creates leverage or opens an off-ramp."
       ];
       confidenceLabel = "medium";
@@ -91,6 +151,8 @@ export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
       summary = `Based on visible state, ${topOption.title.toLowerCase()} is the clearest recommendation.`;
       rationale = [
         `${topOption.title} carries the highest visible advisory score at ${topOption.recommendationPercent ?? 0}%.`,
+        strategicAssessment?.visiblePriority ?? doctrineLine,
+        opponentLine,
         `Public tension is ${publicState.worldTension}%, so visible signaling still matters.`,
         "This answer is limited to currently visible options and public state."
       ];
@@ -102,6 +164,8 @@ export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
         "The crisis remains unresolved, and the visible state suggests that pressure and signaling are the main drivers right now.";
       rationale = [
         publicState.publicNarrative,
+        privateLine,
+        opponentLine,
         `World tension is ${publicState.worldTension}% in the public state.`,
         "This answer is grounded only in public information and visible options."
       ];
@@ -111,6 +175,8 @@ export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
       summary = shortAnswer;
       rationale = [
         `${topOption.title} is currently the highest-ranked visible option.`,
+        strategicAssessment?.visiblePriority ?? doctrineLine,
+        opponentLine,
         `Visible tension is ${publicState.worldTension}%.`,
         "No hidden state was used to produce this answer."
       ];
@@ -132,11 +198,13 @@ export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
       confidencePercent: topOption?.recommendationPercent ?? 25,
       riskNotes: [
         "Recommendation percentages are advisory and not deterministic.",
-        "This mock advisor answers from visible public state and visible options only."
+        "This mock advisor answers from player-visible public and faction-visible private state only."
       ],
       assumptions: [
         `Scenario context: ${input.scenario.title}`,
         pacingAssumption,
+        doctrineLine,
+        opponentLine,
         "No hidden intelligence or external LLM call has been used in this placeholder implementation."
       ],
       metadata: {

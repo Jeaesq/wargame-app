@@ -5,6 +5,7 @@ import {
   type Game,
   type TurnResolution
 } from "@wargame/shared";
+import { buildVisibleStrategicAssessment } from "../services/faction-strategy-context.js";
 import type { AdvisorVisibleContext, SessionViewSelection } from "./contracts.js";
 
 // Projection rules:
@@ -78,6 +79,24 @@ function getPlayerIdsForFactions(session: Game, factionIds: string[]): string[] 
   return session.players
     .filter((player) => player.factionId && allowedFactionIds.has(player.factionId))
     .map((player) => player.id);
+}
+
+function getLikelyOpponentFactionId(session: Game, factionId: string | null) {
+  if (!factionId) {
+    return null;
+  }
+
+  const activeFactionId = session.currentFactionId ?? session.state.public.activeFactionId ?? null;
+
+  if (activeFactionId && activeFactionId !== factionId) {
+    return activeFactionId;
+  }
+
+  return (
+    session.players.find(
+      (player) => player.factionId && player.factionId !== factionId && player.isActive
+    )?.factionId ?? null
+  );
 }
 
 export function resolveSessionProjectionScope(
@@ -286,20 +305,41 @@ export function buildAdvisorVisibleContext(
   const focalPrivateStates = focalPlayerId
     ? projected.state.privateByPlayer.filter((state) => state.playerId === focalPlayerId)
     : projected.state.privateByPlayer;
+  const focalPrivateState =
+    focalPrivateStates.find(
+      (state) => state.factionId === (selection.factionId ?? scope.factionIds[0] ?? null)
+    ) ?? focalPrivateStates[0] ?? null;
   const visibleOptions = uniqueOptionsById(
     focalPrivateStates.flatMap((state) => state.availableOptions)
   );
   const lastAdvisorAnswer = projected.advisorAnswers.at(-1) ?? null;
+  const focalFactionId = selection.factionId ?? scope.factionIds[0] ?? null;
+  const likelyOpponentFactionId = getLikelyOpponentFactionId(projected, focalFactionId);
 
   return {
     gameId: projected.id,
     turnNumber: projected.turnNumber,
-    factionId: selection.factionId ?? scope.factionIds[0] ?? null,
+    factionId: focalFactionId,
     playerId: focalPlayerId,
+    likelyOpponentFactionId,
     publicState: projected.state.public,
     visibleOutcome: projected.state.derived.outcome,
     visibleOptions,
     visibleWarnings: projected.state.derived.warnings,
+    privateBriefing: focalPrivateState?.privateBriefing ?? null,
+    visibleIntelligence: focalPrivateState?.intelligence ?? [],
+    strategicAssessment: focalFactionId
+      ? buildVisibleStrategicAssessment({
+          game: projected,
+          factionId: focalFactionId
+        })
+      : null,
+    likelyOpponentAssessment: likelyOpponentFactionId
+      ? buildVisibleStrategicAssessment({
+          game: projected,
+          factionId: likelyOpponentFactionId
+        })
+      : null,
     lastAdvisorAnswer
   };
 }

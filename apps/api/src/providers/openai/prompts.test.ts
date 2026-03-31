@@ -111,6 +111,7 @@ const context: AdvisorVisibleContext = {
   turnNumber: 1,
   factionId: "faction-usa",
   playerId: "player-1",
+  likelyOpponentFactionId: "faction-ussr",
   publicState: {
     gameId: "game-1",
     scenarioId: "scenario-cold-war-berlin-mvp",
@@ -162,6 +163,34 @@ const context: AdvisorVisibleContext = {
     }
   ],
   visibleWarnings: ["Public resolve is being tested."],
+  privateBriefing: "Hold access while avoiding a direct clash.",
+  visibleIntelligence: ["Soviet pressure is steady but not yet absolute."],
+  strategicAssessment: {
+    doctrineLabel: "measured resolve",
+    preferredCategories: ["diplomatic", "intelligence"],
+    cautiousCategories: ["military"],
+    scenarioFocus: "superpower signaling and allied credibility in Berlin",
+    ownObjectivePressure: 50,
+    rivalObjectivePressure: 50,
+    escalationRiskPercent: 55,
+    worldTension: 58,
+    strategicPosture: "contest",
+    visiblePriority:
+      "The visible contest is still balanced, so measured resolve should guide which legal pressure you apply next."
+  },
+  likelyOpponentAssessment: {
+    doctrineLabel: "coercive leverage below the threshold of war",
+    preferredCategories: ["economic", "military", "diplomatic"],
+    cautiousCategories: ["military"],
+    scenarioFocus: "pressure, ambiguity, and bargaining leverage in Berlin",
+    ownObjectivePressure: 50,
+    rivalObjectivePressure: 50,
+    escalationRiskPercent: 55,
+    worldTension: 58,
+    strategicPosture: "contest",
+    visiblePriority:
+      "Berlin still rewards coercive leverage, so sustained pressure should outpace Western reassurance without making the crisis obviously uncontrollable."
+  },
   lastAdvisorAnswer: null
 };
 
@@ -282,16 +311,37 @@ test("advisor prompt includes explicit visibility and evidence boundaries", () =
 
   assert.match(prompt.instructions, /Answer only from player-visible information/i);
   const parsed = JSON.parse(prompt.prompt) as {
-    visibleState: { visibleOptionIds: string[]; visibleOutcome: { status: string } };
+    visibleState: {
+      visibleOptionIds: string[];
+      visibleOutcome: { status: string };
+      likelyOpponentFactionId: string | null;
+      privateBriefing: string | null;
+      visibleIntelligence: string[];
+      strategicAssessment: { doctrineLabel: string };
+      likelyOpponentAssessment: { doctrineLabel: string };
+    };
     answerRequirements: { assumptions: string };
     rules: string[];
   };
 
   assert.deepEqual(parsed.visibleState.visibleOptionIds, ["option-1"]);
   assert.equal(parsed.visibleState.visibleOutcome.status, "ongoing");
+  assert.equal(parsed.visibleState.likelyOpponentFactionId, "faction-ussr");
+  assert.match(parsed.visibleState.privateBriefing ?? "", /direct clash/i);
+  assert.deepEqual(parsed.visibleState.visibleIntelligence, [
+    "Soviet pressure is steady but not yet absolute."
+  ]);
+  assert.equal(parsed.visibleState.strategicAssessment.doctrineLabel, "measured resolve");
+  assert.equal(
+    parsed.visibleState.likelyOpponentAssessment.doctrineLabel,
+    "coercive leverage below the threshold of war"
+  );
   assert.match(parsed.answerRequirements.assumptions, /Use this only for cautious inference/i);
   assert.ok(
     parsed.rules.some((rule) => /Distinguish known facts from inference/i.test(rule))
+  );
+  assert.ok(
+    parsed.rules.some((rule) => /Faction-visible private briefing and intelligence/i.test(rule))
   );
   assert.ok(
     parsed.rules.some((rule) => /Keep recommendations actionable/i.test(rule))

@@ -398,6 +398,16 @@ test("submit turn persists human and bot resolutions and updates canonical state
     ),
     true
   );
+  assert.match(nextHumanState.privateBriefing, /now faces the next decision window/i);
+  assert.match(nextHumanState.privateBriefing, /measured resolve/i);
+  assert.equal(
+    nextHumanState.intelligence.some((line) => /Placeholder intelligence/i.test(line)),
+    false
+  );
+  assert.equal(
+    nextHumanState.intelligence.some((line) => /Your doctrine favors measured resolve/i.test(line)),
+    true
+  );
   assert.ok(submission.game.lastResolution);
   assert.equal(submission.game.lastResolution?.actor.playerRole, "ai");
 
@@ -444,6 +454,14 @@ test("advisor flow returns a validated visible-state answer contract", async () 
   assert.equal(answer.perspectiveFactionId, "faction-usa");
   assert.ok(answer.shortAnswer.length > 0);
   assert.ok(answer.rationale.length >= 1);
+  assert.equal(
+    answer.rationale.some((line) => /measured resolve|visible doctrine/i.test(line)),
+    true
+  );
+  assert.equal(
+    answer.rationale.some((line) => /opposing posture|coercive leverage/i.test(line)),
+    true
+  );
   assert.match(answer.metadata.provider as string, /advisor/i);
 });
 

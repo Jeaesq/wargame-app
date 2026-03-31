@@ -64,7 +64,85 @@ export function createSuezMvpScenarioDefinition() {
         privateTraits: ["cabinet-friction", "external-pressure"],
         colorToken: "navy",
         isPlayable: true,
-        metadata: {}
+        metadata: {
+          strategyProfile: {
+            doctrineLabel: "compressed coercion before diplomatic isolation",
+            preferredCategories: ["military", "diplomatic", "economic"],
+            cautiousCategories: ["military"],
+            categoryBiases: {
+              military: 5,
+              diplomatic: 2,
+              economic: 2
+            },
+            pressureBias: 9,
+            restraintBias: 2,
+            initiativeBias: 9,
+            scenarioFocus: "coalition tempo and international backlash in Suez",
+            contestedPriority:
+              "Suez rewards fast coalition tempo, but each visible move also risks accelerating diplomatic isolation if pressure outruns its political cover.",
+            recoveryPriority:
+              "If coalition leverage is slipping in Suez, the next move should restore tempo before outside pressure shuts the operational window.",
+            protectionPriority:
+              "With initiative already in hand, the coalition should protect its position in Suez without making diplomatic isolation irreversible.",
+            escalationPriority:
+              "Suez is approaching the point where extra force may cost more politically than it gains militarily, so disciplined pressure matters more than spectacle."
+          },
+          privateStateProfile: {
+            defaultActingTrackDeltas: {
+              coalitionUnity: 1
+            },
+            defaultReactingTrackDeltas: {
+              usPressure: 1
+            },
+            actingTrackDeltasByCategory: {
+              military: {
+                coalitionUnity: 2,
+                usPressure: 4
+              },
+              diplomatic: {
+                coalitionUnity: 1,
+                usPressure: -2
+              },
+              economic: {
+                coalitionUnity: 1,
+                usPressure: 1
+              }
+            },
+            reactingTrackDeltasByCategory: {
+              propaganda: {
+                coalitionUnity: -1,
+                usPressure: 2
+              },
+              diplomatic: {
+                coalitionUnity: -1,
+                usPressure: 1
+              }
+            },
+            actingFlagAddsByCategory: {
+              military: ["coalition-timetable-sensitive"]
+            },
+            highTensionTrackDeltas: {
+              acting: {
+                usPressure: 2
+              },
+              reacting: {
+                usPressure: 1
+              }
+            },
+            thresholdRules: [
+              {
+                track: "usPressure",
+                min: 60,
+                addFlags: ["washington-resistant"]
+              },
+              {
+                track: "coalitionUnity",
+                max: 48,
+                addFlags: ["cabinet-friction-rising"]
+              }
+            ]
+          }
+        }
       },
       {
         id: "faction-egypt",
@@ -80,7 +158,88 @@ export function createSuezMvpScenarioDefinition() {
         privateTraits: ["arab-solidarity", "security-dispersal"],
         colorToken: "gold",
         isPlayable: true,
-        metadata: {}
+        metadata: {
+          strategyProfile: {
+            doctrineLabel: "sovereignty through endurance and political cost",
+            preferredCategories: ["propaganda", "diplomatic", "intelligence"],
+            cautiousCategories: ["military"],
+            categoryBiases: {
+              propaganda: 6,
+              diplomatic: 3,
+              intelligence: 2
+            },
+            pressureBias: 4,
+            restraintBias: 8,
+            initiativeBias: 5,
+            scenarioFocus: "sovereignty, legitimacy, and outside opinion in Suez",
+            contestedPriority:
+              "Suez still turns on legitimacy, so Egypt should keep international sympathy and political endurance at the center of the next move.",
+            recoveryPriority:
+              "If Egypt is visibly slipping in Suez, the next move should raise the political cost of intervention before raw tempo becomes decisive.",
+            protectionPriority:
+              "With legitimacy and leverage holding, Egypt should preserve sovereignty gains in Suez without inviting a coalition move that looks newly justified.",
+            escalationPriority:
+              "When Suez nears open rupture, Egypt gains more from disciplined legitimacy and outside pressure than from matching coalition military tempo step for step."
+          },
+          privateStateProfile: {
+            defaultActingTrackDeltas: {
+              regimeCohesion: 1
+            },
+            defaultReactingTrackDeltas: {
+              arabSupport: 1
+            },
+            actingTrackDeltasByCategory: {
+              propaganda: {
+                arabSupport: 4,
+                regimeCohesion: 2
+              },
+              diplomatic: {
+                arabSupport: 2,
+                regimeCohesion: 1
+              },
+              intelligence: {
+                regimeCohesion: 2
+              },
+              military: {
+                arabSupport: -1,
+                regimeCohesion: -2
+              }
+            },
+            reactingTrackDeltasByCategory: {
+              military: {
+                arabSupport: 2,
+                regimeCohesion: -2
+              },
+              economic: {
+                regimeCohesion: -1
+              }
+            },
+            actingFlagAddsByCategory: {
+              propaganda: ["international-sympathy-rising"]
+            },
+            highTensionTrackDeltas: {
+              acting: {
+                regimeCohesion: -1,
+                arabSupport: 1
+              },
+              reacting: {
+                regimeCohesion: -1
+              }
+            },
+            thresholdRules: [
+              {
+                track: "arabSupport",
+                min: 60,
+                addFlags: ["regional-solidarity-surging"]
+              },
+              {
+                track: "regimeCohesion",
+                max: 50,
+                addFlags: ["security-apparatus-strained"]
+              }
+            ]
+          }
+        }
       }
     ],
     openingState: {

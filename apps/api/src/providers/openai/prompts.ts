@@ -246,8 +246,13 @@ export function buildOpenAIAdvisorPrompt(
       visibleState: {
         turnNumber: input.context.turnNumber,
         factionId: input.context.factionId,
+        likelyOpponentFactionId: input.context.likelyOpponentFactionId,
         publicState: input.context.publicState,
         visibleOutcome: input.context.visibleOutcome,
+        privateBriefing: input.context.privateBriefing,
+        visibleIntelligence: input.context.visibleIntelligence,
+        strategicAssessment: input.context.strategicAssessment,
+        likelyOpponentAssessment: input.context.likelyOpponentAssessment,
         visibleOptions,
         visibleOptionIds: visibleOptions.map((option) => option.id),
         visibleWarnings: input.context.visibleWarnings,
@@ -282,6 +287,8 @@ export function buildOpenAIAdvisorPrompt(
       },
       rules: [
         "Use only the supplied visibleState and question.",
+        "Faction-visible private briefing and intelligence in visibleState are allowed evidence because they are already scoped to the requesting player.",
+        "likelyOpponentAssessment is a backend-supplied visible inference based on public state and scenario framing. You may use it, but do not invent extra hidden motives beyond it.",
         "Distinguish known facts from inference. Put known visible facts in rationale; put cautious inference or uncertainty in assumptions.",
         "Do not mention hidden information, secret intentions, or unseen future options.",
         "Treat targetGameLength as pacing guidance, not as a strict turn cap or guaranteed ending.",

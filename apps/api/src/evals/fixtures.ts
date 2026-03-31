@@ -315,6 +315,8 @@ function createContext(input: {
     turnNumber: input.turnNumber,
     factionId: input.factionId,
     playerId: input.factionId === "faction-usa" ? "player-usa" : "player-ussr",
+    likelyOpponentFactionId:
+      input.factionId === "faction-usa" ? "faction-ussr" : "faction-usa",
     publicState: input.publicState,
     visibleOutcome:
       input.visibleOutcome ?? {
@@ -335,9 +337,65 @@ function createContext(input: {
           "faction-ussr": 50
         },
         metadata: {}
-      },
+    },
     visibleOptions: input.visibleOptions,
     visibleWarnings: input.visibleWarnings,
+    privateBriefing: `Visible private briefing for ${input.factionId}.`,
+    visibleIntelligence: [`Visible intelligence summary for ${input.factionId}.`],
+    strategicAssessment: {
+      doctrineLabel:
+        input.factionId === "faction-usa" ? "measured resolve" : "coercive leverage",
+      preferredCategories:
+        input.factionId === "faction-usa"
+          ? ["diplomatic", "intelligence"]
+          : ["economic", "military"],
+      cautiousCategories: ["military"],
+      scenarioFocus:
+        input.factionId === "faction-usa"
+          ? "superpower signaling and allied credibility in Berlin"
+          : "pressure, ambiguity, and bargaining leverage in Berlin",
+      ownObjectivePressure:
+        (input.visibleOutcome?.publicObjectiveProgress[input.factionId] ??
+          (input.factionId === "faction-usa" ? 50 : 50)) as number,
+      rivalObjectivePressure:
+        Math.max(
+          ...Object.entries(
+            input.visibleOutcome?.publicObjectiveProgress ?? {
+              "faction-usa": 50,
+              "faction-ussr": 50
+            }
+          )
+            .filter(([factionId]) => factionId !== input.factionId)
+            .map(([, value]) => value),
+          50
+        ),
+      escalationRiskPercent: 55,
+      worldTension: input.publicState.worldTension,
+      strategicPosture: "contest",
+      visiblePriority: "Visible pressure remains contested, so doctrine should shape the next legal move."
+    },
+    likelyOpponentAssessment: {
+      doctrineLabel:
+        input.factionId === "faction-usa"
+          ? "coercive leverage below the threshold of war"
+          : "measured resolve under allied scrutiny",
+      preferredCategories:
+        input.factionId === "faction-usa"
+          ? ["economic", "military", "diplomatic"]
+          : ["diplomatic", "intelligence", "military"],
+      cautiousCategories: ["military"],
+      scenarioFocus:
+        input.factionId === "faction-usa"
+          ? "pressure, ambiguity, and bargaining leverage in Berlin"
+          : "superpower signaling and allied credibility in Berlin",
+      ownObjectivePressure: 50,
+      rivalObjectivePressure: 50,
+      escalationRiskPercent: 55,
+      worldTension: input.publicState.worldTension,
+      strategicPosture: "contest",
+      visiblePriority:
+        "The likely opponent still has visible room to contest the crisis, so recommendations should account for an active adversary."
+    },
     lastAdvisorAnswer: null
   };
 }
