@@ -123,6 +123,32 @@ async function createHeadToHeadGame() {
   };
 }
 
+async function createSuezSoloGame() {
+  const services = createServices();
+  const createPayload: CreateGameRequest = {
+    scenarioId: "scenario-suez-crisis-mvp",
+    mode: "solo",
+    targetGameLength: "medium",
+    players: [
+      {
+        name: "Canal Player",
+        role: "human",
+        factionId: "faction-anglo-french"
+      }
+    ]
+  };
+
+  const game = await services.gameSessionService.createSession(
+    createPayload,
+    defaultTestUserId
+  );
+
+  return {
+    services,
+    game: gameSchema.parse(game)
+  };
+}
+
 test("create session and load session overview", async () => {
   const { services, game: createdGame } = await createSoloGame();
 
@@ -260,6 +286,56 @@ test("session retrieval projects public and faction-private views explicitly", a
   assert.equal(usaViewWithIdentity.state.privateByPlayer[0]?.factionId, "faction-usa");
   assert.ok(usaViewWithIdentity.state.privateByPlayer[0]?.availableOptions.length);
   assert.ok(usaViewWithIdentity.state.derived.legalActionIds.length > 0);
+});
+
+test("scenario catalog supports multiple playable scenarios and initializes Suez cleanly", async () => {
+  const { services, game } = await createSuezSoloGame();
+  const scenarios = await services.scenarioRepository.listScenarios();
+
+  assert.ok(
+    scenarios.some((scenario) => scenario.id === "scenario-cold-war-berlin-mvp")
+  );
+  assert.ok(
+    scenarios.some((scenario) => scenario.id === "scenario-suez-crisis-mvp")
+  );
+  assert.equal(game.scenarioId, "scenario-suez-crisis-mvp");
+  assert.match(game.state.public.headline ?? "", /Suez/i);
+  assert.equal(game.factions.some((faction) => faction.id === "faction-egypt"), true);
+  assert.equal(
+    game.state.privateByPlayer[0]?.availableOptions.every(
+      (option) => option.scenarioId === "scenario-suez-crisis-mvp"
+    ),
+    true
+  );
+  assert.ok(
+    game.state.privateByPlayer[0]?.availableOptions.some(
+      (option) => option.id === "option-coalition-airborne-plan"
+    )
+  );
+});
+
+test("session creation rejects faction ids that do not belong to the selected scenario", async () => {
+  const services = createServices();
+
+  await assert.rejects(
+    () =>
+      services.gameSessionService.createSession(
+        {
+          scenarioId: "scenario-suez-crisis-mvp",
+          mode: "solo",
+          targetGameLength: "medium",
+          players: [
+            {
+              name: "Player One",
+              role: "human",
+              factionId: "faction-usa"
+            }
+          ]
+        },
+        defaultTestUserId
+      ),
+    /not playable in scenario/i
+  );
 });
 
 test("submit turn persists human and bot resolutions and updates canonical state", async () => {

@@ -59,8 +59,15 @@ export function buildGameFromScenario(input: BuildGameFromScenarioInput): Game {
   const players = requestedPlayers.map((player, index) => {
     const fallbackFaction = playableFactions[index];
     const factionId = player.factionId ?? fallbackFaction?.id ?? null;
+    const faction = playableFactions.find((candidate) => candidate.id === factionId);
 
-    if (!factionId) {
+    if (player.factionId && !faction) {
+      throw new ValidationError(
+        `Faction ${player.factionId} is not playable in scenario ${scenario.id}.`
+      );
+    }
+
+    if (!factionId || !faction) {
       throw new ValidationError("Not enough playable factions are available for the requested players.");
     }
 

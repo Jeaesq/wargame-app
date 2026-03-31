@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ScenarioDefinition } from "@wargame/shared";
 import { createGameAction, type FormActionState } from "../app/games/new/actions";
@@ -14,7 +14,12 @@ type CreateGameFormProps = {
 export function CreateGameForm({ scenarios }: CreateGameFormProps) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(createGameAction, initialState);
-  const scenario = scenarios[0];
+  const [selectedScenarioId, setSelectedScenarioId] = useState(scenarios[0]?.id ?? "");
+  const [selectedFactionId, setSelectedFactionId] = useState(
+    scenarios[0]?.factions[0]?.id ?? ""
+  );
+  const scenario =
+    scenarios.find((item) => item.id === selectedScenarioId) ?? scenarios[0] ?? null;
 
   useEffect(() => {
     if (state.redirectTo) {
@@ -22,6 +27,18 @@ export function CreateGameForm({ scenarios }: CreateGameFormProps) {
       router.refresh();
     }
   }, [router, state.redirectTo]);
+
+  useEffect(() => {
+    if (!scenario) {
+      return;
+    }
+
+    const stillValid = scenario.factions.some((faction) => faction.id === selectedFactionId);
+
+    if (!stillValid) {
+      setSelectedFactionId(scenario.factions[0]?.id ?? "");
+    }
+  }, [scenario, selectedFactionId]);
 
   return (
     <form action={formAction} className="panel form-card">
@@ -32,7 +49,11 @@ export function CreateGameForm({ scenarios }: CreateGameFormProps) {
         </label>
         <label className="field">
           <span>Scenario</span>
-          <select defaultValue={scenario?.id} name="scenarioId">
+          <select
+            name="scenarioId"
+            value={scenario?.id ?? ""}
+            onChange={(event) => setSelectedScenarioId(event.target.value)}
+          >
             {scenarios.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.title}
@@ -48,7 +69,12 @@ export function CreateGameForm({ scenarios }: CreateGameFormProps) {
         </label>
         <label className="field">
           <span>Player faction</span>
-          <select defaultValue={scenario?.factions[0]?.id} name="factionId">
+          <select
+            key={scenario?.id ?? "scenario-none"}
+            name="factionId"
+            value={selectedFactionId}
+            onChange={(event) => setSelectedFactionId(event.target.value)}
+          >
             {(scenario?.factions ?? []).map((faction) => (
               <option key={faction.id} value={faction.id}>
                 {faction.name}

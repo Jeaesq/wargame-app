@@ -21,6 +21,13 @@ function buildPacingGuidance(targetGameLength: "short" | "medium" | "long") {
   };
 }
 
+function buildScenarioToneLabel(input: {
+  title: string;
+  historicalFrame: string;
+}) {
+  return `${input.title} (${input.historicalFrame})`;
+}
+
 function buildStructuredPrompt(payload: Record<string, unknown>): string {
   return JSON.stringify(payload, null, 2);
 }
@@ -52,9 +59,12 @@ function toVisibleOptionSnapshot(option: {
   };
 }
 
-function buildNarrativeQualityRules() {
+function buildNarrativeQualityRules(input: {
+  title: string;
+  historicalFrame: string;
+}) {
   return [
-    "Preserve Cold War realism, plausible statecraft, and period-appropriate restraint.",
+    `Preserve realism, plausible statecraft, and period-appropriate restraint for ${buildScenarioToneLabel(input)}.`,
     "Prefer concrete consequences, motives, and tradeoffs over generic filler.",
     "Avoid vague stock phrases unless they are tied to a supplied fact.",
     "Do not describe backend-owned outcomes as uncertain when they are already provided deterministically."
@@ -69,7 +79,7 @@ export function buildOpenAITurnGenerationPrompt(
 
   return {
     instructions:
-      "You are generating structured turn-resolution narration for a Cold War crisis simulation. The backend already decided the canonical action, legal moves, turn order, and deterministic state deltas. Use the prompt as bounded evidence, never as a request to invent mechanics. Return only JSON matching the requested schema.",
+      "You are generating structured turn-resolution narration for a historical geopolitical crisis simulation. The backend already decided the canonical action, legal moves, turn order, and deterministic state deltas. Use the prompt as bounded evidence, never as a request to invent mechanics. Return only JSON matching the requested schema.",
     prompt: buildStructuredPrompt({
       task: "Generate turn narration artifacts only.",
       scenario: {
@@ -185,7 +195,10 @@ export function buildOpenAITurnGenerationPrompt(
         "recommendedOptionNotes must only reference ids from visibleNextOptions and should reward category variety where the supplied options support it.",
         "When visibleNextOptions span multiple strategic categories, favor concise comparisons that make those categories feel meaningfully different.",
         "worldUpdateSuggestions are advisory proposals only and must not assume they automatically become canonical state.",
-        ...buildNarrativeQualityRules()
+        ...buildNarrativeQualityRules({
+          title: input.scenario.title,
+          historicalFrame: input.scenario.historicalFrame
+        })
       ]
     })
   };
@@ -202,7 +215,7 @@ export function buildOpenAIAdvisorPrompt(
 
   return {
     instructions:
-      "You are an advisor for a Cold War crisis simulation. Answer only from player-visible information supplied in the prompt. The backend is the source of truth for what is visible, legal, and already known. Do not infer hidden intelligence, secret state, unseen future moves, or backend-only rules outcomes. Return only JSON matching the requested schema.",
+      "You are an advisor for a historical geopolitical crisis simulation. Answer only from player-visible information supplied in the prompt. The backend is the source of truth for what is visible, legal, and already known. Do not infer hidden intelligence, secret state, unseen future moves, or backend-only rules outcomes. Return only JSON matching the requested schema.",
     prompt: buildStructuredPrompt({
       task: "Answer a player question from visible state only.",
       scenario: {
@@ -276,7 +289,10 @@ export function buildOpenAIAdvisorPrompt(
         "Keep recommendations actionable and tied to visible options or visible constraints.",
         "Use recommendedOptionIds only for option ids that appear in visibleOptionIds.",
         "If visibility is insufficient, say so plainly, reduce confidence, and avoid overclaiming.",
-        ...buildNarrativeQualityRules()
+        ...buildNarrativeQualityRules({
+          title: input.scenario.title,
+          historicalFrame: input.scenario.historicalFrame
+        })
       ]
     })
   };
@@ -290,7 +306,7 @@ export function buildOpenAIBotDecisionPrompt(
 } {
   return {
     instructions:
-      "You are selecting one legal bot action for the current faction in a Cold War crisis simulation. The backend remains the source of truth and supplied all valid choices. Return only JSON matching the requested schema.",
+      "You are selecting one legal bot action for the current faction in a historical geopolitical crisis simulation. The backend remains the source of truth and supplied all valid choices. Return only JSON matching the requested schema.",
     prompt: JSON.stringify(
       {
         task: "Select a single legal option for the bot faction.",
