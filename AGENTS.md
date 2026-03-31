@@ -23,6 +23,21 @@ Build a browser-based strategy game in which 1 or more players take turns making
 - Small, reviewable commits
 - Avoid unnecessary dependencies
 
+## Execution plans
+
+For complex features, major refactors, or multi-step initiatives, use `PLANS.md` as the execution-plan source of truth.
+
+When working from a plan:
+- read `PLANS.md` first
+- propose or update the relevant phase/subtasks before coding
+- keep the plan current as work progresses
+- implement in small, reviewable increments
+- preserve the currently working app unless the plan explicitly calls for a broader change
+
+Current product priority:
+- make solo mode genuinely strong and fully playable before prioritizing multiplayer
+- multiplayer groundwork may continue where it reduces future rework, but multiplayer features are not the current focus
+
 ## Game design priorities
 - Cold War historical scenario for MVP
 - 1-player and 2-player modes first

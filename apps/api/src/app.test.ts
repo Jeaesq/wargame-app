@@ -157,6 +157,9 @@ test("create session and load session overview", async () => {
   assert.equal(createdGame.ownerUserId, defaultTestUserId);
   assert.equal(createdGame.turnNumber, 1);
   assert.equal(createdGame.mode, "solo");
+  assert.equal(createdGame.progression.model, "solo_round");
+  assert.equal(createdGame.progression.currentRoundActionIndex, 1);
+  assert.equal(createdGame.progression.roundActionCount, 2);
 
   const listedGames = await services.gameSessionService.listSessions(defaultTestUserId);
   assert.equal(listedGames.length, 1);
@@ -363,9 +366,18 @@ test("submit turn persists human and bot resolutions and updates canonical state
   );
 
   assert.equal(submission.resolution.actor.playerRole, "human");
+  assert.equal(submission.resolution.turnNumber, 1);
+  assert.equal(submission.resolution.progression.roundActionIndex, 1);
+  assert.equal(submission.resolution.progression.roundActionCount, 2);
+  assert.equal(submission.resolution.progression.advancesRound, false);
   assert.equal(submission.followupResolutions.length, 1);
   assert.equal(submission.followupResolutions[0]?.actor.playerRole, "ai");
-  assert.equal(submission.game.turnNumber, 3);
+  assert.equal(submission.followupResolutions[0]?.turnNumber, 1);
+  assert.equal(submission.followupResolutions[0]?.progression.roundActionIndex, 2);
+  assert.equal(submission.followupResolutions[0]?.progression.advancesRound, true);
+  assert.equal(submission.game.turnNumber, 2);
+  assert.equal(submission.game.progression.currentRound, 2);
+  assert.equal(submission.game.progression.completedRoundCount, 1);
   assert.ok(submission.game.lastResolution);
   assert.equal(submission.game.lastResolution?.actor.playerRole, "ai");
 
@@ -376,6 +388,8 @@ test("submit turn persists human and bot resolutions and updates canonical state
   assert.equal(turnHistory.turns.length, 2);
   assert.equal(turnHistory.turns[0]?.actor.playerRole, "human");
   assert.equal(turnHistory.turns[1]?.actor.playerRole, "ai");
+  assert.equal(turnHistory.turns[0]?.turnNumber, 1);
+  assert.equal(turnHistory.turns[1]?.turnNumber, 1);
   assert.equal(turnHistory.turns[1]?.actingFactionId, "faction-ussr");
 
   const reloadedGame = await services.gameSessionService.getSession(
@@ -383,7 +397,9 @@ test("submit turn persists human and bot resolutions and updates canonical state
     defaultTestUserId
   );
 
-  assert.equal(reloadedGame.turnNumber, 3);
+  assert.equal(reloadedGame.turnNumber, 2);
+  assert.equal(reloadedGame.progression.currentRound, 2);
+  assert.equal(reloadedGame.progression.completedRoundCount, 1);
   assert.equal(reloadedGame.lastResolution?.actor.playerRole, "ai");
   assert.ok(reloadedGame.state.public.worldTension > createdGame.state.public.worldTension);
 });

@@ -6,7 +6,9 @@ type TurnHistoryProps = {
 
 export function TurnHistory({ turns }: TurnHistoryProps) {
   const reverseChronologicalTurns = [...turns].sort(
-    (left, right) => right.turnNumber - left.turnNumber
+    (left, right) =>
+      right.turnNumber - left.turnNumber ||
+      right.progression.roundActionIndex - left.progression.roundActionIndex
   );
 
   function formatSignedDelta(value: number) {
@@ -23,7 +25,12 @@ export function TurnHistory({ turns }: TurnHistoryProps) {
         {reverseChronologicalTurns.map((turn) => (
           <li className="history-item" key={turn.id}>
             <div className="panel__header">
-              <strong>Turn {turn.turnNumber}</strong>
+              <strong>
+                Turn {turn.turnNumber}
+                {turn.progression.roundActionCount > 1
+                  ? ` · Step ${turn.progression.roundActionIndex}/${turn.progression.roundActionCount}`
+                  : ""}
+              </strong>
               <span className="pill">{turn.status}</span>
             </div>
             <div className="inline-meta">

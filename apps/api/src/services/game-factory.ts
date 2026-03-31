@@ -220,6 +220,13 @@ export function buildGameFromScenario(input: BuildGameFromScenarioInput): Game {
           .map((option) => option.id)
       }
     },
+    progression: {
+      model: mode === "solo" ? "solo_round" : "per_action",
+      currentRound: scenario.startingTurn,
+      currentRoundActionIndex: 1,
+      roundActionCount: mode === "solo" ? 2 : 1,
+      completedRoundCount: 0
+    },
     advisorAnswers: [],
     lastResolution: null,
     createdAt: now,

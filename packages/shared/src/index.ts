@@ -356,6 +356,22 @@ export const stateChangeSchema = z.object({
   visibility: z.enum(["public", "private", "derived"]).default("public")
 });
 
+export const gameProgressionSchema = z.object({
+  model: z.enum(["per_action", "solo_round"]).default("per_action"),
+  currentRound: z.number().int().nonnegative().default(1),
+  currentRoundActionIndex: z.number().int().positive().default(1),
+  roundActionCount: z.number().int().positive().default(1),
+  completedRoundCount: z.number().int().nonnegative().default(0)
+});
+
+export const turnResolutionProgressionSchema = z.object({
+  roundNumber: z.number().int().nonnegative().default(1),
+  roundActionIndex: z.number().int().positive().default(1),
+  roundActionCount: z.number().int().positive().default(1),
+  advancesRound: z.boolean().default(true),
+  nextRoundNumber: z.number().int().nonnegative().default(1)
+});
+
 export const turnResolutionSchema = z.object({
   id: z.string().min(1),
   gameId: z.string().min(1),
@@ -376,6 +392,13 @@ export const turnResolutionSchema = z.object({
   recommendationLabels: tagsSchema,
   riskLabels: tagsSchema,
   llmNarrative: llmNarrativeUpdateSchema,
+  progression: turnResolutionProgressionSchema.default({
+    roundNumber: 1,
+    roundActionIndex: 1,
+    roundActionCount: 1,
+    advancesRound: true,
+    nextRoundNumber: 1
+  }),
   resolvedAt: isoTimestampSchema,
   metadata: metadataSchema
 });
@@ -432,6 +455,13 @@ export const gameSchema = z.object({
     public: publicGameStateSchema,
     privateByPlayer: z.array(privatePlayerStateSchema).default([]),
     derived: derivedGameStateSchema
+  }),
+  progression: gameProgressionSchema.default({
+    model: "per_action",
+    currentRound: 1,
+    currentRoundActionIndex: 1,
+    roundActionCount: 1,
+    completedRoundCount: 0
   }),
   advisorAnswers: z.array(advisorAnswerSchema).default([]),
   lastResolution: turnResolutionSchema.nullable().default(null),
@@ -537,6 +567,8 @@ export type AdvisorResponsePayload = z.infer<typeof advisorResponsePayloadSchema
 export type ResolvedActionSummary = z.infer<typeof resolvedActionSummarySchema>;
 export type ResolvedActor = z.infer<typeof resolvedActorSchema>;
 export type StateChange = z.infer<typeof stateChangeSchema>;
+export type GameProgression = z.infer<typeof gameProgressionSchema>;
+export type TurnResolutionProgression = z.infer<typeof turnResolutionProgressionSchema>;
 export type CreateGameDebugConfig = z.infer<typeof createGameDebugConfigSchema>;
 export type CreateGameRequest = z.infer<typeof createGameRequestSchema>;
 export type GamesListResponse = z.infer<typeof gamesListResponseSchema>;

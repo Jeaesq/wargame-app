@@ -262,6 +262,13 @@ const game: Game = {
       metadata: {}
     }
   },
+  progression: {
+    model: "per_action",
+    currentRound: 1,
+    currentRoundActionIndex: 1,
+    roundActionCount: 1,
+    completedRoundCount: 0
+  },
   advisorAnswers: [],
   lastResolution: null,
   createdAt: "1948-06-24T00:00:00.000Z",

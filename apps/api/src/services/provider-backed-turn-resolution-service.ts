@@ -26,6 +26,12 @@ type PreparedTurnContext = {
   selectedOption: ChoiceOption;
   nextFactionId: string | null;
   nextTurnNumber: number;
+  nextCompletedRoundCount: number;
+  nextRoundActionIndex: number;
+  roundNumber: number;
+  roundActionIndex: number;
+  roundActionCount: number;
+  advancesRound: boolean;
   tensionDelta: number;
   nextWorldTension: number;
   resolvedAt: string;
@@ -85,6 +91,19 @@ function sanitizeNarrativePrivateUpdates(input: {
   return input.privateUpdates.filter(
     (update) => update.factionId === input.actingFactionId
   );
+}
+
+function getNextFactionInOrder(game: Game, actingFactionId: string): string | null {
+  const playableFactionOrder = game.players
+    .map((player) => player.factionId)
+    .filter((factionId): factionId is string => Boolean(factionId));
+  const currentIndex = playableFactionOrder.findIndex(
+    (factionId) => factionId === actingFactionId
+  );
+
+  return currentIndex >= 0
+    ? playableFactionOrder[(currentIndex + 1) % playableFactionOrder.length] ?? null
+    : game.currentFactionId;
 }
 
 export class ProviderBackedTurnResolutionService implements TurnResolutionService {
@@ -262,6 +281,13 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
         ...artifacts.llmNarrative,
         privateUpdates: narrativePrivateUpdates
       },
+      progression: {
+        roundNumber: prepared.roundNumber,
+        roundActionIndex: prepared.roundActionIndex,
+        roundActionCount: prepared.roundActionCount,
+        advancesRound: prepared.advancesRound,
+        nextRoundNumber: prepared.nextTurnNumber
+      },
       resolvedAt: prepared.resolvedAt,
       metadata: {
         ...artifacts.metadata,
@@ -318,17 +344,40 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
       );
     }
 
-    const playableFactionOrder = input.game.players
-      .map((player) => player.factionId)
-      .filter((factionId): factionId is string => Boolean(factionId));
-    const currentIndex = playableFactionOrder.findIndex(
-      (factionId) => factionId === input.action.factionId
-    );
-    const nextFactionId =
-      currentIndex >= 0
-        ? playableFactionOrder[(currentIndex + 1) % playableFactionOrder.length]
-        : input.game.currentFactionId;
-    const nextTurnNumber = input.game.turnNumber + 1;
+    const progression = input.game.progression ?? {
+      model: input.game.mode === "solo" ? "solo_round" : "per_action",
+      currentRound: input.game.turnNumber,
+      currentRoundActionIndex: 1,
+      roundActionCount: input.game.mode === "solo" ? 2 : 1,
+      completedRoundCount: Math.max(0, input.game.turnNumber - 1)
+    };
+    const roundNumber = progression.currentRound;
+    const roundActionIndex = progression.currentRoundActionIndex;
+    const roundActionCount = progression.roundActionCount;
+    const defaultNextFactionId = getNextFactionInOrder(input.game, input.action.factionId);
+    let nextFactionId = defaultNextFactionId;
+    let nextTurnNumber = input.game.turnNumber + 1;
+    let nextCompletedRoundCount = progression.completedRoundCount + 1;
+    let nextRoundActionIndex = 1;
+    let advancesRound = true;
+
+    if (input.game.mode === "solo") {
+      const humanFactionId =
+        input.game.players.find((player) => player.role === "human")?.factionId ??
+        defaultNextFactionId;
+      const aiFactionId =
+        input.game.players.find((player) => player.role === "ai")?.factionId ??
+        defaultNextFactionId;
+
+      advancesRound = actingPlayer.role === "ai" || roundActionIndex >= roundActionCount;
+      nextFactionId = advancesRound ? humanFactionId : aiFactionId;
+      nextTurnNumber = advancesRound ? input.game.turnNumber + 1 : input.game.turnNumber;
+      nextCompletedRoundCount = advancesRound
+        ? progression.completedRoundCount + 1
+        : progression.completedRoundCount;
+      nextRoundActionIndex = advancesRound ? 1 : roundActionIndex + 1;
+    }
+
     const fallbackTensionDelta =
       selectedOption.kind === "military_signal"
         ? 12
@@ -348,6 +397,12 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
       selectedOption,
       nextFactionId,
       nextTurnNumber,
+      nextCompletedRoundCount,
+      nextRoundActionIndex,
+      roundNumber,
+      roundActionIndex,
+      roundActionCount,
+      advancesRound,
       tensionDelta,
       nextWorldTension,
       resolvedAt: this.now()
@@ -469,6 +524,15 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
           outcome: input.sessionOutcome,
           warnings: uniqueWarnings
         }
+      },
+      progression: {
+        ...game.progression,
+        currentRound: prepared.nextTurnNumber,
+        currentRoundActionIndex: isCompleted ? 1 : prepared.nextRoundActionIndex,
+        roundActionCount: game.mode === "solo" ? 2 : 1,
+        completedRoundCount: isCompleted
+          ? prepared.nextCompletedRoundCount
+          : prepared.nextCompletedRoundCount
       },
       advisorAnswers: [],
       lastResolution: resolution,

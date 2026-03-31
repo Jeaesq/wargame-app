@@ -467,6 +467,13 @@ function createGame(input: {
         metadata: {}
       }
     },
+    progression: {
+      model: "per_action",
+      currentRound: input.turnNumber,
+      currentRoundActionIndex: 1,
+      roundActionCount: 1,
+      completedRoundCount: Math.max(0, input.turnNumber - 1)
+    },
     advisorAnswers: [],
     lastResolution: null,
     createdAt: "1948-06-24T00:00:00.000Z",
