@@ -1,4 +1,10 @@
-import { gameSchema, type CreateGameRequest, type Game } from "@wargame/shared";
+import {
+  canUserAccessGame,
+  gameSchema,
+  listPlayersControlledByUser,
+  type CreateGameRequest,
+  type Game
+} from "@wargame/shared";
 import { ForbiddenError, NotFoundError } from "../errors/app-error.js";
 import type {
   GameSessionRepository,
@@ -86,10 +92,7 @@ export class GameSessionService {
   }
 
   private canUserAccessSession(session: Game, userId: string): boolean {
-    return (
-      session.ownerUserId === userId ||
-      session.players.some((player) => player.userId === userId)
-    );
+    return canUserAccessGame(session, userId);
   }
 
   private resolveDefaultSelectionForUser(
@@ -101,7 +104,7 @@ export class GameSessionService {
       return selection;
     }
 
-    const userPlayers = session.players.filter((player) => player.userId === userId);
+    const userPlayers = listPlayersControlledByUser(session, userId);
 
     if (userPlayers.length === 1) {
       return {

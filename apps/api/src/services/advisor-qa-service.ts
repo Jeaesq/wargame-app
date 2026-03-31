@@ -1,4 +1,9 @@
-import { advisorAnswerSchema, gameSchema } from "@wargame/shared";
+import {
+  advisorAnswerSchema,
+  gameSchema,
+  canUserAccessGame,
+  isPlayerControlledByUser
+} from "@wargame/shared";
 import { ForbiddenError, NotFoundError } from "../errors/app-error.js";
 import type {
   AdvisorContextRepository,
@@ -29,10 +34,7 @@ export class AdvisorQaService {
       throw new NotFoundError(`Game ${input.sessionId} was not found.`);
     }
 
-    if (
-      game.ownerUserId !== input.requestUserId &&
-      !game.players.some((player) => player.userId === input.requestUserId)
-    ) {
+    if (!canUserAccessGame(game, input.requestUserId)) {
       throw new ForbiddenError(
         `User ${input.requestUserId} cannot access game ${input.sessionId}.`
       );
@@ -41,8 +43,7 @@ export class AdvisorQaService {
     if (
       input.playerId &&
       !game.players.some(
-        (player) =>
-          player.id === input.playerId && player.userId === input.requestUserId
+        (player) => player.id === input.playerId && isPlayerControlledByUser(player, input.requestUserId)
       )
     ) {
       throw new ForbiddenError(

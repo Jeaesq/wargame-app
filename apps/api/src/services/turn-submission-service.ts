@@ -1,4 +1,6 @@
 import {
+  canUserAccessGame,
+  isPlayerControlledByUser,
   turnActionSchema,
   turnResolutionSchema,
   type CreateTurnRequest,
@@ -43,16 +45,13 @@ export class TurnSubmissionService {
       throw new NotFoundError(`Game ${sessionId} was not found.`);
     }
 
-    if (
-      game.ownerUserId !== requestUserId &&
-      !game.players.some((player) => player.userId === requestUserId)
-    ) {
+    if (!canUserAccessGame(game, requestUserId)) {
       throw new ForbiddenError(`User ${requestUserId} cannot access game ${sessionId}.`);
     }
 
     const actingPlayer = game.players.find((player) => player.id === input.playerId);
 
-    if (!actingPlayer || actingPlayer.userId !== requestUserId) {
+    if (!actingPlayer || !isPlayerControlledByUser(actingPlayer, requestUserId)) {
       throw new ForbiddenError(
         `User ${requestUserId} cannot submit turns for player ${input.playerId}.`
       );

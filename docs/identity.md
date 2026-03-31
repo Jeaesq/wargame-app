@@ -60,3 +60,5 @@ Later, real auth can replace the request identity resolver without changing core
 - allow invited users to claim open faction slots
 - separate owner, participant, observer, and admin roles
 - move from development headers/defaults to signed sessions or tokens
+
+For the concrete multi-device multiplayer flow and phased implementation plan, see [multiplayer-next-steps](./multiplayer-next-steps.md).

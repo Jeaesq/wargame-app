@@ -217,6 +217,7 @@ The backend should treat narrative and strategy generation as a replaceable prov
 - current prototype identity is resolved from a development header or backend default, not from production auth
 - session list and retrieval routes are now ownership-aware
 - the intent is to replace the request identity resolver later without redesigning the game/session services
+- shared access helpers now centralize current session access and player-control semantics so future auth and seat-claim flows do not have to rediscover that logic piecemeal
 
 Current default:
 
@@ -259,6 +260,8 @@ Recommended persistence concepts:
 - `turn_records`
 - `player_assignments`
 - `faction_private_state` if private slices are separated physically later
+
+For the phased plan to evolve this into true multi-controller multiplayer, see [multiplayer-next-steps](./multiplayer-next-steps.md).
 
 ## Extensibility direction
 

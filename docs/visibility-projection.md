@@ -40,3 +40,5 @@ This keeps the backend as the source of truth while making visibility rules expl
 - multiple human-controlled factions
 - stricter advisor visibility guarantees
 - future providers that need both canonical and player-visible state without conflating them
+
+The planned multi-device multiplayer flow continues to build on these same projections. See [multiplayer-next-steps](./multiplayer-next-steps.md).

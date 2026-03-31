@@ -2,7 +2,9 @@ import Link from "next/link";
 import type { Game } from "@wargame/shared";
 import {
   buildFactionViewHref,
+  getClaimableFactionSeats,
   getControlledPlayers,
+  getCurrentUserAccessRole,
   getCurrentUserIdentity,
   getFactionName
 } from "../lib/session-access";
@@ -20,7 +22,8 @@ export function SessionAccessPanel({
 }: SessionAccessPanelProps) {
   const identity = getCurrentUserIdentity();
   const controlledPlayers = getControlledPlayers(game);
-  const owner = game.ownerUserId === identity.userId;
+  const claimableSeats = getClaimableFactionSeats(game);
+  const accessRole = getCurrentUserAccessRole(game);
   const selectedPlayer =
     controlledPlayers.find((player) => player.id === selectedPlayerId) ??
     controlledPlayers[0] ??
@@ -30,7 +33,7 @@ export function SessionAccessPanel({
     <section className="panel">
       <div className="panel__header">
         <h2>Session Access</h2>
-        <span className="pill">{owner ? "Owner" : "Participant"}</span>
+        <span className="pill">{accessRole === "owner" ? "Owner" : "Controller"}</span>
       </div>
       <div className="inline-meta">
         <span className="pill">User: {identity.displayName}</span>
@@ -43,6 +46,11 @@ export function SessionAccessPanel({
         This is lightweight multiplayer scaffolding: the same session can later be opened from
         different faction perspectives.
       </p>
+      {claimableSeats.length > 0 ? (
+        <p className="muted">
+          Future join flow placeholder: {claimableSeats.map((player) => getFactionName(game, player.factionId)).join(", ")} can become claimable faction seats for another logged-in user.
+        </p>
+      ) : null}
       {controlledPlayers.length > 0 ? (
         <div className="inline-meta">
           {controlledPlayers.map((player) => {

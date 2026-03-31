@@ -431,3 +431,46 @@ export type ScenariosListResponse = z.infer<typeof scenariosListResponseSchema>;
 export type CreateTurnRequest = z.infer<typeof createTurnRequestSchema>;
 export type TurnResolutionResponse = z.infer<typeof turnResolutionResponseSchema>;
 export type TurnsListResponse = z.infer<typeof turnsListResponseSchema>;
+
+export type SessionAccessRole = "owner" | "controller" | "participant" | "none";
+export type PlayerAssignmentStatus = "claimed_human" | "open_human" | "ai_controlled" | "observer";
+
+export function getPlayerAssignmentStatus(player: Player): PlayerAssignmentStatus {
+  if (player.role === "observer") {
+    return "observer";
+  }
+
+  if (player.role === "ai") {
+    return "ai_controlled";
+  }
+
+  return player.userId ? "claimed_human" : "open_human";
+}
+
+export function isPlayerControlledByUser(player: Player, userId: string): boolean {
+  return player.userId === userId;
+}
+
+export function isPlayerClaimableByUser(player: Player): boolean {
+  return player.role === "human" && !player.userId;
+}
+
+export function listPlayersControlledByUser(game: Game, userId: string): Player[] {
+  return game.players.filter((player) => isPlayerControlledByUser(player, userId));
+}
+
+export function canUserAccessGame(game: Game, userId: string): boolean {
+  return game.ownerUserId === userId || listPlayersControlledByUser(game, userId).length > 0;
+}
+
+export function getUserSessionAccessRole(game: Game, userId: string): SessionAccessRole {
+  if (game.ownerUserId === userId) {
+    return "owner";
+  }
+
+  if (listPlayersControlledByUser(game, userId).length > 0) {
+    return "controller";
+  }
+
+  return "none";
+}

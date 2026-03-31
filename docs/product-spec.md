@@ -129,3 +129,5 @@ The MVP design should leave room for:
 - database-backed persistence and analytics
 - richer moderator and replay tooling
 - real user accounts and invited faction assignments replacing the current development identity shim
+
+The near-term implementation path for that multiplayer evolution is documented in [multiplayer-next-steps](./multiplayer-next-steps.md).

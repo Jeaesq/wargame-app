@@ -1,4 +1,10 @@
-import type { Game, Player } from "@wargame/shared";
+import {
+  getPlayerAssignmentStatus,
+  getUserSessionAccessRole,
+  listPlayersControlledByUser,
+  type Game,
+  type Player
+} from "@wargame/shared";
 
 const defaultUserId = process.env.WARGAME_DEV_USER_ID ?? "local-dev-user";
 const defaultUserName = process.env.WARGAME_DEV_USER_NAME ?? "Local Dev User";
@@ -13,7 +19,7 @@ export function getCurrentUserIdentity() {
 export function getControlledPlayers(game: Game): Player[] {
   const currentUserId = getCurrentUserIdentity().userId;
 
-  return game.players.filter((player) => player.userId === currentUserId);
+  return listPlayersControlledByUser(game, currentUserId);
 }
 
 export function getSelectedPlayerView(game: Game, playerId?: string | null): Player | null {
@@ -32,6 +38,14 @@ export function getFactionName(game: Game, factionId?: string | null): string {
   }
 
   return game.factions.find((faction) => faction.id === factionId)?.name ?? factionId;
+}
+
+export function getCurrentUserAccessRole(game: Game) {
+  return getUserSessionAccessRole(game, getCurrentUserIdentity().userId);
+}
+
+export function getClaimableFactionSeats(game: Game): Player[] {
+  return game.players.filter((player) => getPlayerAssignmentStatus(player) === "open_human");
 }
 
 export function buildFactionViewHref(input: {
