@@ -297,6 +297,7 @@ export function buildAdvisorVisibleContext(
     factionId: selection.factionId ?? scope.factionIds[0] ?? null,
     playerId: focalPlayerId,
     publicState: projected.state.public,
+    visibleOutcome: projected.state.derived.outcome,
     visibleOptions,
     visibleWarnings: projected.state.derived.warnings,
     lastAdvisorAnswer

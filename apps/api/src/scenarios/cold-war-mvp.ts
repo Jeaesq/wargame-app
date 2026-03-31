@@ -13,6 +13,42 @@ export function createColdWarMvpScenarioDefinition() {
     supportedModes: ["solo", "head_to_head"],
     maxPlayers: 2,
     startingTurn: 1,
+    objectives: [
+      {
+        id: "objective-usa-hold-berlin",
+        factionId: "faction-usa",
+        title: "Hold access and allied credibility",
+        summary:
+          "Keep Berlin viable, preserve coalition confidence, and show resolve without letting the crisis spin into open war.",
+        successSignals: [
+          "Western leverage improves while tension stays containable.",
+          "Public attention reinforces Allied legitimacy instead of panic."
+        ],
+        failureSignals: [
+          "Escalation outruns control.",
+          "Soviet pressure fractures Western resolve or forces visible retreat."
+        ],
+        visibility: "public",
+        metadata: {}
+      },
+      {
+        id: "objective-ussr-force-concessions",
+        factionId: "faction-ussr",
+        title: "Force concessions without triggering war",
+        summary:
+          "Sustain coercive leverage, test Western staying power, and extract advantage while avoiding catastrophic superpower escalation.",
+        successSignals: [
+          "Pressure rises faster than Western negotiating leverage.",
+          "Moscow keeps the initiative without crossing into uncontrolled conflict."
+        ],
+        failureSignals: [
+          "Pressure hardens Allied resolve instead of splitting it.",
+          "Escalation becomes too dangerous to exploit."
+        ],
+        visibility: "public",
+        metadata: {}
+      }
+    ],
     factions: [
       {
         id: "faction-usa",
@@ -105,6 +141,25 @@ export function createColdWarMvpScenarioDefinition() {
           "faction-usa": 50,
           "faction-ussr": 50
         },
+        outcome: {
+          status: "ongoing",
+          category: null,
+          title: null,
+          summary: null,
+          winningFactionId: null,
+          achievedAtTurn: null,
+          pressure: {
+            maturityPercent: 8,
+            decisiveOutcomePercent: 18,
+            deescalationOpportunityPercent: 46,
+            catastrophicRiskPercent: 32
+          },
+          publicObjectiveProgress: {
+            "faction-usa": 53,
+            "faction-ussr": 50
+          },
+          metadata: {}
+        },
         warnings: ["Misreading intentions could cause rapid crisis escalation."],
         metadata: {}
       },
@@ -120,6 +175,25 @@ export function createColdWarMvpScenarioDefinition() {
           requirementTags: ["briefing"],
           consequenceHints: ["lower-escalation", "limited-leverage"],
           recommendationPercent: 61,
+          effectProfile: {
+            worldTensionDelta: -2,
+            escalationRiskDelta: -3,
+            visibleTrackDeltas: {
+              diplomaticPressure: 4,
+              globalAttention: 5
+            },
+            negotiationLeverageDeltas: {
+              "faction-usa": 5,
+              "faction-ussr": -2
+            },
+            factionMomentumDeltas: {
+              "faction-usa": 2
+            },
+            publicFlagAdds: ["allied-protest"],
+            publicFlagRemoves: [],
+            revealedEventAdds: ["western-protest-note"],
+            warningAdds: []
+          },
           metadata: {}
         },
         {
@@ -133,6 +207,26 @@ export function createColdWarMvpScenarioDefinition() {
           requirementTags: ["briefing"],
           consequenceHints: ["higher-risk", "alliance-credibility"],
           recommendationPercent: 68,
+          effectProfile: {
+            worldTensionDelta: 8,
+            escalationRiskDelta: 6,
+            visibleTrackDeltas: {
+              militaryPosture: 8,
+              globalAttention: 4
+            },
+            negotiationLeverageDeltas: {
+              "faction-usa": 6,
+              "faction-ussr": -1
+            },
+            factionMomentumDeltas: {
+              "faction-usa": 7,
+              "faction-ussr": -2
+            },
+            publicFlagAdds: ["airlift-expanded"],
+            publicFlagRemoves: [],
+            revealedEventAdds: ["airlift-sorties-expanded"],
+            warningAdds: ["Military signaling is raising the stakes around Berlin."]
+          },
           metadata: {}
         }
       ]
@@ -149,6 +243,25 @@ export function createColdWarMvpScenarioDefinition() {
         requirementTags: ["briefing"],
         consequenceHints: ["lower-escalation", "limited-leverage"],
         recommendationPercent: 61,
+        effectProfile: {
+          worldTensionDelta: -2,
+          escalationRiskDelta: -3,
+          visibleTrackDeltas: {
+            diplomaticPressure: 4,
+            globalAttention: 5
+          },
+          negotiationLeverageDeltas: {
+            "faction-usa": 5,
+            "faction-ussr": -2
+          },
+          factionMomentumDeltas: {
+            "faction-usa": 2
+          },
+          publicFlagAdds: ["allied-protest"],
+          publicFlagRemoves: [],
+          revealedEventAdds: ["western-protest-note"],
+          warningAdds: []
+        },
         metadata: {}
       },
       {
@@ -162,6 +275,91 @@ export function createColdWarMvpScenarioDefinition() {
         requirementTags: ["briefing"],
         consequenceHints: ["higher-risk", "alliance-credibility"],
         recommendationPercent: 68,
+        effectProfile: {
+          worldTensionDelta: 8,
+          escalationRiskDelta: 6,
+          visibleTrackDeltas: {
+            militaryPosture: 8,
+            globalAttention: 4
+          },
+          negotiationLeverageDeltas: {
+            "faction-usa": 6,
+            "faction-ussr": -1
+          },
+          factionMomentumDeltas: {
+            "faction-usa": 7,
+            "faction-ussr": -2
+          },
+          publicFlagAdds: ["airlift-expanded"],
+          publicFlagRemoves: [],
+          revealedEventAdds: ["airlift-sorties-expanded"],
+          warningAdds: ["Military signaling is raising the stakes around Berlin."]
+        },
+        metadata: {}
+      },
+      {
+        id: "option-usa-alliance-summit",
+        scenarioId: "scenario-cold-war-berlin-mvp",
+        factionId: "faction-usa",
+        kind: "diplomatic",
+        title: "Convene an emergency allied summit",
+        summary:
+          "Lock in allied messaging and burden-sharing before Soviet pressure widens political cracks.",
+        visibility: "public",
+        requirementTags: ["briefing"],
+        consequenceHints: ["alliance-credibility", "slower-escalation"],
+        recommendationPercent: 64,
+        effectProfile: {
+          worldTensionDelta: 1,
+          escalationRiskDelta: -1,
+          visibleTrackDeltas: {
+            diplomaticPressure: 3,
+            globalAttention: 2
+          },
+          negotiationLeverageDeltas: {
+            "faction-usa": 7
+          },
+          factionMomentumDeltas: {
+            "faction-usa": 5
+          },
+          publicFlagAdds: ["allied-summit"],
+          publicFlagRemoves: [],
+          revealedEventAdds: ["allied-consultations-begin"],
+          warningAdds: []
+        },
+        metadata: {}
+      },
+      {
+        id: "option-usa-backchannel",
+        scenarioId: "scenario-cold-war-berlin-mvp",
+        factionId: "faction-usa",
+        kind: "intelligence",
+        title: "Use backchannels to test an off-ramp",
+        summary:
+          "Probe for a face-saving arrangement while avoiding a visible climbdown in public posture.",
+        visibility: "private",
+        requirementTags: ["briefing"],
+        consequenceHints: ["de-escalation", "uncertain-payoff"],
+        recommendationPercent: 59,
+        effectProfile: {
+          worldTensionDelta: -5,
+          escalationRiskDelta: -6,
+          visibleTrackDeltas: {
+            diplomaticPressure: -2,
+            globalAttention: -1
+          },
+          negotiationLeverageDeltas: {
+            "faction-usa": 3,
+            "faction-ussr": 2
+          },
+          factionMomentumDeltas: {
+            "faction-usa": 1
+          },
+          publicFlagAdds: ["quiet-contact"],
+          publicFlagRemoves: [],
+          revealedEventAdds: ["signals-of-private-contact"],
+          warningAdds: []
+        },
         metadata: {}
       },
       {
@@ -175,6 +373,26 @@ export function createColdWarMvpScenarioDefinition() {
         requirementTags: ["briefing"],
         consequenceHints: ["pressure", "ambiguity"],
         recommendationPercent: 57,
+        effectProfile: {
+          worldTensionDelta: 5,
+          escalationRiskDelta: 4,
+          visibleTrackDeltas: {
+            diplomaticPressure: 7,
+            globalAttention: 3
+          },
+          negotiationLeverageDeltas: {
+            "faction-ussr": 5,
+            "faction-usa": -3
+          },
+          factionMomentumDeltas: {
+            "faction-ussr": 6,
+            "faction-usa": -2
+          },
+          publicFlagAdds: ["administrative-pressure-expanded"],
+          publicFlagRemoves: [],
+          revealedEventAdds: ["soviet-checks-expanded"],
+          warningAdds: ["Incremental coercion is hardening the standoff."]
+        },
         metadata: {}
       },
       {
@@ -188,6 +406,91 @@ export function createColdWarMvpScenarioDefinition() {
         requirementTags: ["briefing"],
         consequenceHints: ["lower-escalation", "uncertain-concessions"],
         recommendationPercent: 63,
+        effectProfile: {
+          worldTensionDelta: -4,
+          escalationRiskDelta: -5,
+          visibleTrackDeltas: {
+            diplomaticPressure: -1
+          },
+          negotiationLeverageDeltas: {
+            "faction-ussr": 4,
+            "faction-usa": 1
+          },
+          factionMomentumDeltas: {
+            "faction-ussr": 2
+          },
+          publicFlagAdds: ["quiet-channel-active"],
+          publicFlagRemoves: [],
+          revealedEventAdds: ["private-overtures-reported"],
+          warningAdds: []
+        },
+        metadata: {}
+      },
+      {
+        id: "option-ussr-probe-checkpoints",
+        scenarioId: "scenario-cold-war-berlin-mvp",
+        factionId: "faction-ussr",
+        kind: "military_signal",
+        title: "Stage a checkpoint probe",
+        summary:
+          "Push forces forward just enough to test Western reactions without authorizing open combat.",
+        visibility: "public",
+        requirementTags: ["briefing"],
+        consequenceHints: ["higher-risk", "coercive-leverage"],
+        recommendationPercent: 66,
+        effectProfile: {
+          worldTensionDelta: 10,
+          escalationRiskDelta: 9,
+          visibleTrackDeltas: {
+            militaryPosture: 9,
+            globalAttention: 5
+          },
+          negotiationLeverageDeltas: {
+            "faction-ussr": 4,
+            "faction-usa": -2
+          },
+          factionMomentumDeltas: {
+            "faction-ussr": 8,
+            "faction-usa": -3
+          },
+          publicFlagAdds: ["checkpoint-probe"],
+          publicFlagRemoves: [],
+          revealedEventAdds: ["checkpoint-columns-mobilized"],
+          warningAdds: ["Miscalculation is becoming more likely as armed signaling rises."]
+        },
+        metadata: {}
+      },
+      {
+        id: "option-ussr-propaganda",
+        scenarioId: "scenario-cold-war-berlin-mvp",
+        factionId: "faction-ussr",
+        kind: "propaganda",
+        title: "Launch a legitimacy campaign",
+        summary:
+          "Frame the standoff as a Western provocation to weaken Allied diplomatic footing.",
+        visibility: "public",
+        requirementTags: ["briefing"],
+        consequenceHints: ["global-attention", "pressure"],
+        recommendationPercent: 58,
+        effectProfile: {
+          worldTensionDelta: 2,
+          escalationRiskDelta: 1,
+          visibleTrackDeltas: {
+            diplomaticPressure: 4,
+            globalAttention: 6
+          },
+          negotiationLeverageDeltas: {
+            "faction-ussr": 3,
+            "faction-usa": -2
+          },
+          factionMomentumDeltas: {
+            "faction-ussr": 4
+          },
+          publicFlagAdds: ["propaganda-campaign"],
+          publicFlagRemoves: [],
+          revealedEventAdds: ["bloc-media-blitz"],
+          warningAdds: []
+        },
         metadata: {}
       }
     ],

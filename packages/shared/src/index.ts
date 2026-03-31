@@ -58,6 +58,56 @@ export const recommendationBandSchema = z.enum([
 ]);
 export const scenarioComplexitySchema = z.enum(["introductory", "standard", "advanced"]);
 export const targetGameLengthSchema = z.enum(["short", "medium", "long"]);
+export const outcomeCategorySchema = z.enum([
+  "strategic_success",
+  "partial_success",
+  "stalemate",
+  "crisis_deescalation",
+  "catastrophic_escalation"
+]);
+export const outcomeStatusSchema = z.enum(["ongoing", "ended"]);
+
+export const choiceEffectProfileSchema = z.object({
+  worldTensionDelta: z.number().int().min(-100).max(100).default(0),
+  escalationRiskDelta: z.number().int().min(-100).max(100).default(0),
+  visibleTrackDeltas: statsMapSchema,
+  negotiationLeverageDeltas: statsMapSchema,
+  factionMomentumDeltas: statsMapSchema,
+  publicFlagAdds: tagsSchema,
+  publicFlagRemoves: tagsSchema,
+  revealedEventAdds: z.array(z.string()).default([]),
+  warningAdds: z.array(z.string()).default([])
+});
+
+export const scenarioObjectiveSchema = z.object({
+  id: z.string().min(1),
+  factionId: z.string().min(1),
+  title: z.string().min(1),
+  summary: z.string().min(1),
+  successSignals: z.array(z.string()).default([]),
+  failureSignals: z.array(z.string()).default([]),
+  visibility: z.enum(["public", "private"]).default("public"),
+  metadata: metadataSchema
+});
+
+export const sessionOutcomePressureSchema = z.object({
+  maturityPercent: z.number().min(0).max(100),
+  decisiveOutcomePercent: z.number().min(0).max(100),
+  deescalationOpportunityPercent: z.number().min(0).max(100),
+  catastrophicRiskPercent: z.number().min(0).max(100)
+});
+
+export const sessionOutcomeSchema = z.object({
+  status: outcomeStatusSchema.default("ongoing"),
+  category: outcomeCategorySchema.nullable().default(null),
+  title: z.string().nullable().default(null),
+  summary: z.string().nullable().default(null),
+  winningFactionId: z.string().min(1).nullable().default(null),
+  achievedAtTurn: z.number().int().nonnegative().nullable().default(null),
+  pressure: sessionOutcomePressureSchema,
+  publicObjectiveProgress: statsMapSchema,
+  metadata: metadataSchema
+});
 
 export const factionSchema = z.object({
   id: z.string().min(1),
@@ -99,6 +149,17 @@ export const choiceOptionSchema = z.object({
   requirementTags: tagsSchema,
   consequenceHints: tagsSchema,
   recommendationPercent: z.number().min(0).max(100).nullable().default(null),
+  effectProfile: choiceEffectProfileSchema.default({
+    worldTensionDelta: 0,
+    escalationRiskDelta: 0,
+    visibleTrackDeltas: {},
+    negotiationLeverageDeltas: {},
+    factionMomentumDeltas: {},
+    publicFlagAdds: [],
+    publicFlagRemoves: [],
+    revealedEventAdds: [],
+    warningAdds: []
+  }),
   metadata: metadataSchema
 });
 
@@ -140,6 +201,22 @@ export const derivedGameStateSchema = z.object({
   escalationRiskPercent: z.number().min(0).max(100),
   negotiationLeverage: statsMapSchema,
   factionMomentum: statsMapSchema,
+  outcome: sessionOutcomeSchema.default({
+    status: "ongoing",
+    category: null,
+    title: null,
+    summary: null,
+    winningFactionId: null,
+    achievedAtTurn: null,
+    pressure: {
+      maturityPercent: 0,
+      decisiveOutcomePercent: 0,
+      deescalationOpportunityPercent: 0,
+      catastrophicRiskPercent: 0
+    },
+    publicObjectiveProgress: {},
+    metadata: {}
+  }),
   warnings: z.array(z.string()).default([]),
   metadata: metadataSchema
 });
@@ -277,6 +354,7 @@ export const turnResolutionSchema = z.object({
   stateChanges: z.array(stateChangeSchema).default([]),
   updatedTracks: statsMapSchema,
   escalated: z.boolean().default(false),
+  sessionOutcome: sessionOutcomeSchema.nullable().default(null),
   recommendationLabels: tagsSchema,
   riskLabels: tagsSchema,
   llmNarrative: llmNarrativeUpdateSchema,
@@ -316,6 +394,7 @@ export const scenarioDefinitionSchema = z.object({
     }),
     initialOptions: z.array(choiceOptionSchema).default([])
   }),
+  objectives: z.array(scenarioObjectiveSchema).default([]),
   choiceCatalog: z.array(choiceOptionSchema).default([]),
   metadata: metadataSchema
 });
@@ -407,6 +486,8 @@ export type ResolutionStatus = z.infer<typeof resolutionStatusSchema>;
 export type RecommendationBand = z.infer<typeof recommendationBandSchema>;
 export type ScenarioComplexity = z.infer<typeof scenarioComplexitySchema>;
 export type TargetGameLength = z.infer<typeof targetGameLengthSchema>;
+export type OutcomeCategory = z.infer<typeof outcomeCategorySchema>;
+export type OutcomeStatus = z.infer<typeof outcomeStatusSchema>;
 export type Game = z.infer<typeof gameSchema>;
 export type Player = z.infer<typeof playerSchema>;
 export type Faction = z.infer<typeof factionSchema>;
@@ -418,6 +499,10 @@ export type TurnResolution = z.infer<typeof turnResolutionSchema>;
 export type AdvisorAnswer = z.infer<typeof advisorAnswerSchema>;
 export type ScenarioDefinition = z.infer<typeof scenarioDefinitionSchema>;
 export type ChoiceOption = z.infer<typeof choiceOptionSchema>;
+export type ChoiceEffectProfile = z.infer<typeof choiceEffectProfileSchema>;
+export type ScenarioObjective = z.infer<typeof scenarioObjectiveSchema>;
+export type SessionOutcome = z.infer<typeof sessionOutcomeSchema>;
+export type SessionOutcomePressure = z.infer<typeof sessionOutcomePressureSchema>;
 export type TurnGenerationArtifacts = z.infer<typeof turnGenerationArtifactsSchema>;
 export type WorldUpdateSuggestion = z.infer<typeof worldUpdateSuggestionSchema>;
 export type BotDecisionPayload = z.infer<typeof botDecisionPayloadSchema>;

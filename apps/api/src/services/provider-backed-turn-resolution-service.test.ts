@@ -3,6 +3,18 @@ import test from "node:test";
 import type { Game, ScenarioDefinition, TurnAction } from "@wargame/shared";
 import { ProviderBackedTurnResolutionService } from "./provider-backed-turn-resolution-service.js";
 
+const neutralEffectProfile = {
+  worldTensionDelta: 0,
+  escalationRiskDelta: 0,
+  visibleTrackDeltas: {},
+  negotiationLeverageDeltas: {},
+  factionMomentumDeltas: {},
+  publicFlagAdds: [],
+  publicFlagRemoves: [],
+  revealedEventAdds: [],
+  warningAdds: []
+};
+
 const scenario: ScenarioDefinition = {
   id: "scenario-cold-war-berlin-mvp",
   slug: "cold-war-berlin-mvp",
@@ -13,6 +25,28 @@ const scenario: ScenarioDefinition = {
   supportedModes: ["solo", "hotseat"],
   maxPlayers: 2,
   startingTurn: 1,
+  objectives: [
+    {
+      id: "objective-usa",
+      factionId: "faction-usa",
+      title: "Hold access",
+      summary: "Keep Berlin supplied without losing escalation control.",
+      successSignals: [],
+      failureSignals: [],
+      visibility: "public",
+      metadata: {}
+    },
+    {
+      id: "objective-ussr",
+      factionId: "faction-ussr",
+      title: "Sustain pressure",
+      summary: "Force leverage without sliding into war.",
+      successSignals: [],
+      failureSignals: [],
+      visibility: "public",
+      metadata: {}
+    }
+  ],
   factions: [
     {
       id: "faction-usa",
@@ -60,6 +94,25 @@ const scenario: ScenarioDefinition = {
       escalationRiskPercent: 55,
       negotiationLeverage: {},
       factionMomentum: {},
+      outcome: {
+        status: "ongoing",
+        category: null,
+        title: null,
+        summary: null,
+        winningFactionId: null,
+        achievedAtTurn: null,
+        pressure: {
+          maturityPercent: 10,
+          decisiveOutcomePercent: 20,
+          deescalationOpportunityPercent: 40,
+          catastrophicRiskPercent: 50
+        },
+        publicObjectiveProgress: {
+          "faction-usa": 50,
+          "faction-ussr": 50
+        },
+        metadata: {}
+      },
       warnings: [],
       metadata: {}
     },
@@ -77,6 +130,7 @@ const scenario: ScenarioDefinition = {
       requirementTags: [],
       consequenceHints: ["Lowers tempo"],
       recommendationPercent: 61,
+      effectProfile: neutralEffectProfile,
       metadata: {}
     }
   ],
@@ -157,6 +211,7 @@ const game: Game = {
             requirementTags: [],
             consequenceHints: ["Shows resolve"],
             recommendationPercent: 68,
+            effectProfile: neutralEffectProfile,
             metadata: {}
           }
         ],
@@ -184,6 +239,25 @@ const game: Game = {
       escalationRiskPercent: 55,
       negotiationLeverage: {},
       factionMomentum: {},
+      outcome: {
+        status: "ongoing",
+        category: null,
+        title: null,
+        summary: null,
+        winningFactionId: null,
+        achievedAtTurn: null,
+        pressure: {
+          maturityPercent: 10,
+          decisiveOutcomePercent: 20,
+          deescalationOpportunityPercent: 40,
+          catastrophicRiskPercent: 50
+        },
+        publicObjectiveProgress: {
+          "faction-usa": 50,
+          "faction-ussr": 50
+        },
+        metadata: {}
+      },
       warnings: [],
       metadata: {}
     }
@@ -285,6 +359,7 @@ test("turn resolution service keeps private artifacts scoped to the acting facti
     }
   ]);
   assert.deepEqual(result.updatedGame.state.derived.recommendedActionIds, ["option-2"]);
+  assert.equal(result.updatedGame.state.derived.outcome.status, "ongoing");
 });
 
 test("turn resolution provider receives canonical and projected visibility views", async () => {

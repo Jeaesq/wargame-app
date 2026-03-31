@@ -11,6 +11,18 @@ import {
   buildOpenAITurnGenerationPrompt
 } from "./prompts.js";
 
+const neutralEffectProfile = {
+  worldTensionDelta: 0,
+  escalationRiskDelta: 0,
+  visibleTrackDeltas: {},
+  negotiationLeverageDeltas: {},
+  factionMomentumDeltas: {},
+  publicFlagAdds: [],
+  publicFlagRemoves: [],
+  revealedEventAdds: [],
+  warningAdds: []
+};
+
 const scenario: ScenarioDefinition = {
   id: "scenario-cold-war-berlin-mvp",
   slug: "cold-war-berlin-mvp",
@@ -21,6 +33,18 @@ const scenario: ScenarioDefinition = {
   supportedModes: ["solo", "hotseat"],
   maxPlayers: 2,
   startingTurn: 1,
+  objectives: [
+    {
+      id: "objective-usa",
+      factionId: "faction-usa",
+      title: "Hold access",
+      summary: "Keep Berlin supplied while avoiding uncontrolled escalation.",
+      successSignals: [],
+      failureSignals: [],
+      visibility: "public",
+      metadata: {}
+    }
+  ],
   factions: [
     {
       id: "faction-usa",
@@ -55,6 +79,24 @@ const scenario: ScenarioDefinition = {
       escalationRiskPercent: 55,
       negotiationLeverage: {},
       factionMomentum: {},
+      outcome: {
+        status: "ongoing",
+        category: null,
+        title: null,
+        summary: null,
+        winningFactionId: null,
+        achievedAtTurn: null,
+        pressure: {
+          maturityPercent: 10,
+          decisiveOutcomePercent: 20,
+          deescalationOpportunityPercent: 40,
+          catastrophicRiskPercent: 50
+        },
+        publicObjectiveProgress: {
+          "faction-usa": 50
+        },
+        metadata: {}
+      },
       warnings: ["Public resolve is being tested."],
       metadata: {}
     },
@@ -84,6 +126,24 @@ const context: AdvisorVisibleContext = {
     updatedAt: "1948-06-24T00:00:00.000Z",
     metadata: {}
   },
+  visibleOutcome: {
+    status: "ongoing",
+    category: null,
+    title: null,
+    summary: null,
+    winningFactionId: null,
+    achievedAtTurn: null,
+    pressure: {
+      maturityPercent: 10,
+      decisiveOutcomePercent: 20,
+      deescalationOpportunityPercent: 40,
+      catastrophicRiskPercent: 50
+    },
+    publicObjectiveProgress: {
+      "faction-usa": 50
+    },
+    metadata: {}
+  },
   visibleOptions: [
     {
       id: "option-1",
@@ -97,6 +157,7 @@ const context: AdvisorVisibleContext = {
       requirementTags: ["airlift-ready"],
       consequenceHints: ["Shows resolve", "May raise tension modestly"],
       recommendationPercent: 68,
+      effectProfile: neutralEffectProfile,
       metadata: {}
     }
   ],
@@ -153,6 +214,24 @@ const game: Game = {
       escalationRiskPercent: 55,
       negotiationLeverage: {},
       factionMomentum: {},
+      outcome: {
+        status: "ongoing",
+        category: null,
+        title: null,
+        summary: null,
+        winningFactionId: null,
+        achievedAtTurn: null,
+        pressure: {
+          maturityPercent: 10,
+          decisiveOutcomePercent: 20,
+          deescalationOpportunityPercent: 40,
+          catastrophicRiskPercent: 50
+        },
+        publicObjectiveProgress: {
+          "faction-usa": 50
+        },
+        metadata: {}
+      },
       warnings: ["Public resolve is being tested."],
       metadata: {}
     }
@@ -191,12 +270,13 @@ test("advisor prompt includes explicit visibility and evidence boundaries", () =
 
   assert.match(prompt.instructions, /Answer only from player-visible information/i);
   const parsed = JSON.parse(prompt.prompt) as {
-    visibleState: { visibleOptionIds: string[] };
+    visibleState: { visibleOptionIds: string[]; visibleOutcome: { status: string } };
     answerRequirements: { assumptions: string };
     rules: string[];
   };
 
   assert.deepEqual(parsed.visibleState.visibleOptionIds, ["option-1"]);
+  assert.equal(parsed.visibleState.visibleOutcome.status, "ongoing");
   assert.match(parsed.answerRequirements.assumptions, /Use this only for cautious inference/i);
   assert.ok(
     parsed.rules.some((rule) => /Distinguish known facts from inference/i.test(rule))
@@ -239,6 +319,7 @@ test("turn prompt includes authorized private context and stable next-option con
         requirementTags: [],
         consequenceHints: ["Lowers tempo"],
         recommendationPercent: 61,
+        effectProfile: neutralEffectProfile,
         metadata: {}
       }
     ]
@@ -246,11 +327,15 @@ test("turn prompt includes authorized private context and stable next-option con
 
   assert.match(prompt.instructions, /canonical action, legal moves, turn order/i);
   const parsed = JSON.parse(prompt.prompt) as {
+    scenario: { publicObjectives: Array<{ factionId: string }> };
+    publicState: { outcomePressure: { maturityPercent: number } };
     authorizedPrivateContext: { factionId: string; intelligence: string[] };
     outputRequirements: { recommendedNextOptionIds: string };
     rules: string[];
   };
 
+  assert.equal(parsed.scenario.publicObjectives[0]?.factionId, "faction-usa");
+  assert.equal(parsed.publicState.outcomePressure.maturityPercent, 10);
   assert.equal(parsed.authorizedPrivateContext.factionId, "faction-usa");
   assert.deepEqual(parsed.authorizedPrivateContext.intelligence, [
     "Soviet pressure is steady but not yet absolute."

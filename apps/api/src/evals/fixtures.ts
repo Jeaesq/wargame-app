@@ -14,6 +14,18 @@ import type {
 } from "../providers/types.js";
 import { projectSessionForSelection } from "../repositories/session-visibility-projection.js";
 
+const neutralEffectProfile = {
+  worldTensionDelta: 0,
+  escalationRiskDelta: 0,
+  visibleTrackDeltas: {},
+  negotiationLeverageDeltas: {},
+  factionMomentumDeltas: {},
+  publicFlagAdds: [],
+  publicFlagRemoves: [],
+  revealedEventAdds: [],
+  warningAdds: []
+};
+
 export type AdvisorEvalFixture = {
   id: string;
   name: string;
@@ -50,6 +62,28 @@ function createScenario(): ScenarioDefinition {
     supportedModes: ["solo", "hotseat", "head_to_head"],
     maxPlayers: 2,
     startingTurn: 1,
+    objectives: [
+      {
+        id: "objective-usa",
+        factionId: "faction-usa",
+        title: "Hold access",
+        summary: "Keep Berlin supplied while avoiding direct war.",
+        successSignals: [],
+        failureSignals: [],
+        visibility: "public",
+        metadata: {}
+      },
+      {
+        id: "objective-ussr",
+        factionId: "faction-ussr",
+        title: "Sustain pressure",
+        summary: "Force concessions without triggering catastrophic escalation.",
+        successSignals: [],
+        failureSignals: [],
+        visibility: "public",
+        metadata: {}
+      }
+    ],
     factions: [
       {
         id: "faction-usa",
@@ -97,6 +131,25 @@ function createScenario(): ScenarioDefinition {
         escalationRiskPercent: 55,
         negotiationLeverage: {},
         factionMomentum: {},
+        outcome: {
+          status: "ongoing",
+          category: null,
+          title: null,
+          summary: null,
+          winningFactionId: null,
+          achievedAtTurn: null,
+          pressure: {
+            maturityPercent: 25,
+            decisiveOutcomePercent: 30,
+            deescalationOpportunityPercent: 40,
+            catastrophicRiskPercent: 50
+          },
+          publicObjectiveProgress: {
+            "faction-usa": 50,
+            "faction-ussr": 50
+          },
+          metadata: {}
+        },
         warnings: ["Public resolve is being tested."],
         metadata: {}
       },
@@ -114,6 +167,7 @@ function createScenario(): ScenarioDefinition {
         requirementTags: ["airlift-ready"],
         consequenceHints: ["Shows resolve", "May raise tension modestly"],
         recommendationPercent: 69,
+        effectProfile: neutralEffectProfile,
         metadata: {}
       },
       {
@@ -127,6 +181,7 @@ function createScenario(): ScenarioDefinition {
         requirementTags: [],
         consequenceHints: ["Signals resolve", "Raises public expectations"],
         recommendationPercent: 54,
+        effectProfile: neutralEffectProfile,
         metadata: {}
       },
       {
@@ -140,6 +195,7 @@ function createScenario(): ScenarioDefinition {
         requirementTags: ["high-readiness"],
         consequenceHints: ["Strong deterrent signal", "Sharp escalation risk"],
         recommendationPercent: 31,
+        effectProfile: neutralEffectProfile,
         metadata: {}
       },
       {
@@ -153,6 +209,7 @@ function createScenario(): ScenarioDefinition {
         requirementTags: [],
         consequenceHints: ["Sustains pressure", "Preserves deniability"],
         recommendationPercent: 63,
+        effectProfile: neutralEffectProfile,
         metadata: {}
       },
       {
@@ -166,6 +223,7 @@ function createScenario(): ScenarioDefinition {
         requirementTags: [],
         consequenceHints: ["Buys time", "Signals flexibility"],
         recommendationPercent: 58,
+        effectProfile: neutralEffectProfile,
         metadata: {}
       }
     ],
@@ -208,6 +266,25 @@ function createContext(input: {
     factionId: input.factionId,
     playerId: input.factionId === "faction-usa" ? "player-usa" : "player-ussr",
     publicState: input.publicState,
+    visibleOutcome: {
+      status: "ongoing",
+      category: null,
+      title: null,
+      summary: null,
+      winningFactionId: null,
+      achievedAtTurn: null,
+      pressure: {
+        maturityPercent: 25,
+        decisiveOutcomePercent: 30,
+        deescalationOpportunityPercent: 40,
+        catastrophicRiskPercent: 50
+      },
+      publicObjectiveProgress: {
+        "faction-usa": 50,
+        "faction-ussr": 50
+      },
+      metadata: {}
+    },
     visibleOptions: input.visibleOptions,
     visibleWarnings: input.visibleWarnings,
     lastAdvisorAnswer: null
@@ -308,6 +385,25 @@ function createGame(input: {
         escalationRiskPercent: 55,
         negotiationLeverage: {},
         factionMomentum: {},
+        outcome: {
+          status: "ongoing",
+          category: null,
+          title: null,
+          summary: null,
+          winningFactionId: null,
+          achievedAtTurn: null,
+          pressure: {
+            maturityPercent: 42,
+            decisiveOutcomePercent: 34,
+            deescalationOpportunityPercent: 39,
+            catastrophicRiskPercent: 53
+          },
+          publicObjectiveProgress: {
+            "faction-usa": 52,
+            "faction-ussr": 49
+          },
+          metadata: {}
+        },
         warnings:
           input.currentFactionId === "faction-usa"
             ? ["Public resolve is being tested."]

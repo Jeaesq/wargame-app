@@ -42,6 +42,7 @@ export type AdvisorVisibleContext = {
   factionId: string | null;
   playerId?: string;
   publicState: Game["state"]["public"];
+  visibleOutcome: Game["state"]["derived"]["outcome"];
   visibleOptions: ChoiceOption[];
   visibleWarnings: string[];
   lastAdvisorAnswer: AdvisorAnswer | null;

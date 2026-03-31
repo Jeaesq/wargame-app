@@ -49,6 +49,10 @@ export class TurnSubmissionService {
       throw new ForbiddenError(`User ${requestUserId} cannot access game ${sessionId}.`);
     }
 
+    if (game.status === "completed" || game.state.derived.outcome.status === "ended") {
+      throw new ValidationError(`Game ${sessionId} has already reached an end state.`);
+    }
+
     const actingPlayer = game.players.find((player) => player.id === input.playerId);
 
     if (!actingPlayer || !isPlayerControlledByUser(actingPlayer, requestUserId)) {
@@ -97,7 +101,11 @@ export class TurnSubmissionService {
     const followupResolutions: TurnResolution[] = [];
     let currentGame = result.updatedGame;
 
-    if (currentGame.mode === "solo" && currentGame.currentFactionId) {
+    if (
+      currentGame.mode === "solo" &&
+      currentGame.status !== "completed" &&
+      currentGame.currentFactionId
+    ) {
       const botPlayer = currentGame.players.find(
         (player) =>
           player.role === "ai" && player.factionId === currentGame.currentFactionId

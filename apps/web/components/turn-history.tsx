@@ -5,8 +5,8 @@ type TurnHistoryProps = {
 };
 
 export function TurnHistory({ turns }: TurnHistoryProps) {
-  const chronologicalTurns = [...turns].sort(
-    (left, right) => left.turnNumber - right.turnNumber
+  const reverseChronologicalTurns = [...turns].sort(
+    (left, right) => right.turnNumber - left.turnNumber
   );
 
   return (
@@ -16,7 +16,7 @@ export function TurnHistory({ turns }: TurnHistoryProps) {
         <span className="muted">{turns.length} resolved turns</span>
       </div>
       <ul className="history-list">
-        {chronologicalTurns.map((turn) => (
+        {reverseChronologicalTurns.map((turn) => (
           <li className="history-item" key={turn.id}>
             <div className="panel__header">
               <strong>Turn {turn.turnNumber}</strong>
@@ -44,6 +44,12 @@ export function TurnHistory({ turns }: TurnHistoryProps) {
             <p className="highlight">{turn.llmNarrative.headline}</p>
             <p>{turn.publicSummary}</p>
             <p className="muted">{turn.llmNarrative.publicSummary}</p>
+            {turn.sessionOutcome?.status === "ended" ? (
+              <>
+                <p className="highlight">{turn.sessionOutcome.title}</p>
+                <p>{turn.sessionOutcome.summary}</p>
+              </>
+            ) : null}
             <div className="history-grid">
               <div>
                 <h3>State Changes</h3>

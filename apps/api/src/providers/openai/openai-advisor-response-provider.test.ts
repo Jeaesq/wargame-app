@@ -6,6 +6,18 @@ import type { AdvisorVisibleContext } from "../../repositories/contracts.js";
 import type { AdvisorResponseProvider } from "../types.js";
 import { OpenAIAdvisorResponseProvider } from "./openai-advisor-response-provider.js";
 
+const neutralEffectProfile = {
+  worldTensionDelta: 0,
+  escalationRiskDelta: 0,
+  visibleTrackDeltas: {},
+  negotiationLeverageDeltas: {},
+  factionMomentumDeltas: {},
+  publicFlagAdds: [],
+  publicFlagRemoves: [],
+  revealedEventAdds: [],
+  warningAdds: []
+};
+
 const scenario: ScenarioDefinition = {
   id: "scenario-cold-war-berlin-mvp",
   slug: "cold-war-berlin-mvp",
@@ -16,6 +28,18 @@ const scenario: ScenarioDefinition = {
   supportedModes: ["solo", "hotseat"],
   maxPlayers: 2,
   startingTurn: 1,
+  objectives: [
+    {
+      id: "objective-usa",
+      factionId: "faction-usa",
+      title: "Hold access",
+      summary: "Keep Berlin supplied while avoiding uncontrolled escalation.",
+      successSignals: [],
+      failureSignals: [],
+      visibility: "public",
+      metadata: {}
+    }
+  ],
   factions: [
     {
       id: "faction-usa",
@@ -50,6 +74,24 @@ const scenario: ScenarioDefinition = {
       escalationRiskPercent: 55,
       negotiationLeverage: {},
       factionMomentum: {},
+      outcome: {
+        status: "ongoing",
+        category: null,
+        title: null,
+        summary: null,
+        winningFactionId: null,
+        achievedAtTurn: null,
+        pressure: {
+          maturityPercent: 10,
+          decisiveOutcomePercent: 20,
+          deescalationOpportunityPercent: 40,
+          catastrophicRiskPercent: 50
+        },
+        publicObjectiveProgress: {
+          "faction-usa": 50
+        },
+        metadata: {}
+      },
       warnings: ["Public resolve is being tested."],
       metadata: {}
     },
@@ -79,6 +121,24 @@ const context: AdvisorVisibleContext = {
     updatedAt: "1948-06-24T00:00:00.000Z",
     metadata: {}
   },
+  visibleOutcome: {
+    status: "ongoing",
+    category: null,
+    title: null,
+    summary: null,
+    winningFactionId: null,
+    achievedAtTurn: null,
+    pressure: {
+      maturityPercent: 10,
+      decisiveOutcomePercent: 20,
+      deescalationOpportunityPercent: 40,
+      catastrophicRiskPercent: 50
+    },
+    publicObjectiveProgress: {
+      "faction-usa": 50
+    },
+    metadata: {}
+  },
   visibleOptions: [
     {
       id: "option-1",
@@ -92,6 +152,7 @@ const context: AdvisorVisibleContext = {
       requirementTags: [],
       consequenceHints: ["Shows resolve", "May raise tension modestly"],
       recommendationPercent: 68,
+      effectProfile: neutralEffectProfile,
       metadata: {}
     }
   ],

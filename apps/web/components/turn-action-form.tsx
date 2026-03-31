@@ -52,6 +52,17 @@ export function TurnActionForm({ game }: TurnActionFormProps) {
           {actingPlayer.name} · {actingPlayer.factionId}
         </span>
       </div>
+      {game.status === "completed" || game.state.derived.outcome.status === "ended" ? (
+        <>
+          <p className="highlight">
+            {game.state.derived.outcome.title ?? "This session has reached an end state."}
+          </p>
+          <p className="muted">
+            {game.state.derived.outcome.summary ??
+              "Review the session overview and turn history for the final result."}
+          </p>
+        </>
+      ) : null}
       <form action={formAction} className="section-stack">
         <input name="gameId" type="hidden" value={game.id} />
         <input name="playerId" type="hidden" value={actingPlayer.id} />
@@ -63,7 +74,9 @@ export function TurnActionForm({ game }: TurnActionFormProps) {
               className={`option-card option-button ${
                 selectedOptionId === option.id ? "option-button--selected" : ""
               }`}
-              disabled={pending}
+              disabled={
+                pending || game.status === "completed" || game.state.derived.outcome.status === "ended"
+              }
               key={option.id}
               onClick={() => setSelectedOptionId(option.id)}
               type="button"
@@ -89,11 +102,18 @@ export function TurnActionForm({ game }: TurnActionFormProps) {
         <div className="hero__actions">
           <button
             className="button"
-            disabled={pending || !selectedOption}
+            disabled={
+              pending ||
+              !selectedOption ||
+              game.status === "completed" ||
+              game.state.derived.outcome.status === "ended"
+            }
             type="submit"
           >
             {pending
               ? "Submitting..."
+              : game.status === "completed" || game.state.derived.outcome.status === "ended"
+                ? "Session complete"
               : selectedOption
                 ? "Confirm and submit action"
                 : "Select an option first"}

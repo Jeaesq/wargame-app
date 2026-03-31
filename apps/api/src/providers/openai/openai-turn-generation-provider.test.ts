@@ -5,6 +5,18 @@ import { ProviderInvocationError } from "../../errors/app-error.js";
 import type { TurnGenerationProvider, TurnGenerationProviderInput } from "../types.js";
 import { OpenAITurnGenerationProvider } from "./openai-turn-generation-provider.js";
 
+const neutralEffectProfile = {
+  worldTensionDelta: 0,
+  escalationRiskDelta: 0,
+  visibleTrackDeltas: {},
+  negotiationLeverageDeltas: {},
+  factionMomentumDeltas: {},
+  publicFlagAdds: [],
+  publicFlagRemoves: [],
+  revealedEventAdds: [],
+  warningAdds: []
+};
+
 const scenario: ScenarioDefinition = {
   id: "scenario-cold-war-berlin-mvp",
   slug: "cold-war-berlin-mvp",
@@ -15,6 +27,18 @@ const scenario: ScenarioDefinition = {
   supportedModes: ["solo", "hotseat"],
   maxPlayers: 2,
   startingTurn: 1,
+  objectives: [
+    {
+      id: "objective-usa",
+      factionId: "faction-usa",
+      title: "Hold access",
+      summary: "Keep Berlin supplied while avoiding uncontrolled escalation.",
+      successSignals: [],
+      failureSignals: [],
+      visibility: "public",
+      metadata: {}
+    }
+  ],
   factions: [
     {
       id: "faction-usa",
@@ -49,6 +73,24 @@ const scenario: ScenarioDefinition = {
       escalationRiskPercent: 55,
       negotiationLeverage: {},
       factionMomentum: {},
+      outcome: {
+        status: "ongoing",
+        category: null,
+        title: null,
+        summary: null,
+        winningFactionId: null,
+        achievedAtTurn: null,
+        pressure: {
+          maturityPercent: 10,
+          decisiveOutcomePercent: 20,
+          deescalationOpportunityPercent: 40,
+          catastrophicRiskPercent: 50
+        },
+        publicObjectiveProgress: {
+          "faction-usa": 50
+        },
+        metadata: {}
+      },
       warnings: ["Public resolve is being tested."],
       metadata: {}
     },
@@ -120,6 +162,7 @@ const game: Game = {
             requirementTags: [],
             consequenceHints: ["Shows resolve"],
             recommendationPercent: 68,
+            effectProfile: neutralEffectProfile,
             metadata: {}
           }
         ],
@@ -135,6 +178,24 @@ const game: Game = {
       escalationRiskPercent: 55,
       negotiationLeverage: {},
       factionMomentum: {},
+      outcome: {
+        status: "ongoing",
+        category: null,
+        title: null,
+        summary: null,
+        winningFactionId: null,
+        achievedAtTurn: null,
+        pressure: {
+          maturityPercent: 10,
+          decisiveOutcomePercent: 20,
+          deescalationOpportunityPercent: 40,
+          catastrophicRiskPercent: 50
+        },
+        publicObjectiveProgress: {
+          "faction-usa": 50
+        },
+        metadata: {}
+      },
       warnings: [],
       metadata: {}
     }
@@ -175,6 +236,7 @@ const nextOptions = [
     requirementTags: [],
     consequenceHints: ["Lowers tempo"],
     recommendationPercent: 61,
+    effectProfile: neutralEffectProfile,
     metadata: {}
   }
 ];

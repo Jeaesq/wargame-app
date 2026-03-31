@@ -60,6 +60,9 @@ export default async function GameDetailPage({
     factionId: currentHumanPlayer?.factionId
   });
   const currentViewName = getFactionName(game, currentHumanPlayer?.factionId);
+  const factionLabels = Object.fromEntries(
+    game.factions.map((faction) => [faction.id, faction.name])
+  );
 
   return (
     <main className="page">
@@ -96,7 +99,10 @@ export default async function GameDetailPage({
               </section>
               {scenario ? <ScenarioBriefing game={game} scenario={scenario} /> : null}
               <PublicStatePanel game={game} />
-              <DerivedStatePanel derivedState={game.state.derived} />
+              <DerivedStatePanel
+                derivedState={game.state.derived}
+                factionLabels={factionLabels}
+              />
             </section>
             <section className="section-stack history-section">
               <div className="section-label">Historical Turns</div>

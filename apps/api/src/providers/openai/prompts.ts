@@ -69,6 +69,13 @@ export function buildOpenAITurnGenerationPrompt(
         id: input.scenario.id,
         title: input.scenario.title,
         historicalFrame: input.scenario.historicalFrame,
+        publicObjectives: input.scenario.objectives
+          .filter((objective) => objective.visibility === "public")
+          .map((objective) => ({
+            factionId: objective.factionId,
+            title: objective.title,
+            summary: objective.summary
+          })),
         actingFaction: actingFaction
           ? {
               id: actingFaction.id,
@@ -89,7 +96,9 @@ export function buildOpenAITurnGenerationPrompt(
         nextWorldTension: input.nextWorldTension,
         visibleTracks: input.publicView.state.public.visibleTracks,
         publicFlags: input.publicView.state.public.publicFlags,
-        revealedEvents: input.publicView.state.public.revealedEvents
+        revealedEvents: input.publicView.state.public.revealedEvents,
+        outcomePressure: input.publicView.state.derived.outcome.pressure,
+        publicObjectiveProgress: input.publicView.state.derived.outcome.publicObjectiveProgress
       },
       authorizedPrivateContext: {
         playerId: input.actingPlayer.id,
@@ -118,7 +127,8 @@ export function buildOpenAITurnGenerationPrompt(
       deterministicOutcome: {
         tensionDelta: input.tensionDelta,
         nextFactionId: input.nextFactionId,
-        nextWorldTension: input.nextWorldTension
+        nextWorldTension: input.nextWorldTension,
+        outcomeStatus: input.game.state.derived.outcome.status
       },
       nextTurnContext: {
         nextFactionId: input.nextFactionId,
@@ -179,6 +189,13 @@ export function buildOpenAIAdvisorPrompt(
         id: input.scenario.id,
         title: input.scenario.title,
         historicalFrame: input.scenario.historicalFrame,
+        publicObjectives: input.scenario.objectives
+          .filter((objective) => objective.visibility === "public")
+          .map((objective) => ({
+            factionId: objective.factionId,
+            title: objective.title,
+            summary: objective.summary
+          })),
         playerPerspective: faction
           ? {
               factionId: faction.id,
@@ -197,6 +214,7 @@ export function buildOpenAIAdvisorPrompt(
         turnNumber: input.context.turnNumber,
         factionId: input.context.factionId,
         publicState: input.context.publicState,
+        visibleOutcome: input.context.visibleOutcome,
         visibleOptions,
         visibleOptionIds: visibleOptions.map((option) => option.id),
         visibleWarnings: input.context.visibleWarnings,

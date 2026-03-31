@@ -12,6 +12,7 @@ import { ValidationError } from "../errors/app-error.js";
 import { logInfo } from "../logger.js";
 import type { TurnGenerationProvider } from "../providers/types.js";
 import { projectSessionForSelection } from "../repositories/session-visibility-projection.js";
+import { evaluateSessionOutcome } from "./session-outcome-service.js";
 import type {
   ResolveTurnInput,
   ResolveTurnResult,
@@ -32,6 +33,37 @@ type PreparedTurnContext = {
 
 function clampPercentage(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function applyStatDeltas(
+  current: Record<string, number>,
+  deltas: Record<string, number>
+): Record<string, number> {
+  const updated = { ...current };
+
+  for (const [key, delta] of Object.entries(deltas)) {
+    updated[key] = clampPercentage((updated[key] ?? 0) + delta);
+  }
+
+  return updated;
+}
+
+function applyStringAddsAndRemoves(input: {
+  current: string[];
+  adds: string[];
+  removes: string[];
+}) {
+  const result = new Set(input.current);
+
+  for (const value of input.removes) {
+    result.delete(value);
+  }
+
+  for (const value of input.adds) {
+    result.add(value);
+  }
+
+  return [...result];
 }
 
 function sanitizePrivateSummaries(input: {
@@ -96,8 +128,32 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
 
     const escalationRisk = clampPercentage(
       input.game.state.derived.escalationRiskPercent +
-        Math.round(prepared.tensionDelta / 2)
+        Math.round(prepared.tensionDelta / 2) +
+        prepared.selectedOption.effectProfile.escalationRiskDelta
     );
+    const nextVisibleTracks = applyStatDeltas(
+      input.game.state.public.visibleTracks,
+      prepared.selectedOption.effectProfile.visibleTrackDeltas
+    );
+    const nextNegotiationLeverage = applyStatDeltas(
+      input.game.state.derived.negotiationLeverage,
+      prepared.selectedOption.effectProfile.negotiationLeverageDeltas
+    );
+    const nextFactionMomentum = applyStatDeltas(
+      input.game.state.derived.factionMomentum,
+      prepared.selectedOption.effectProfile.factionMomentumDeltas
+    );
+    const sessionOutcome = evaluateSessionOutcome({
+      scenario: input.scenario,
+      targetGameLength: input.game.sessionConfig.targetGameLength,
+      turnNumber: prepared.nextTurnNumber,
+      worldTension: prepared.nextWorldTension,
+      escalationRiskPercent: escalationRisk,
+      visibleTracks: nextVisibleTracks,
+      negotiationLeverage: nextNegotiationLeverage,
+      factionMomentum: nextFactionMomentum,
+      selectedOption: prepared.selectedOption
+    });
 
     const resolution = turnResolutionSchema.parse({
       id: randomUUID(),
@@ -138,13 +194,44 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
           newValue: escalationRisk,
           delta: escalationRisk - input.game.state.derived.escalationRiskPercent,
           visibility: "derived"
-        }
+        },
+        ...Object.entries(prepared.selectedOption.effectProfile.visibleTrackDeltas).map(
+          ([key, delta]) => ({
+            key,
+            label: key,
+            previousValue: input.game.state.public.visibleTracks[key] ?? 0,
+            newValue: nextVisibleTracks[key] ?? 0,
+            delta,
+            visibility: "public" as const
+          })
+        ),
+        ...Object.entries(prepared.selectedOption.effectProfile.negotiationLeverageDeltas).map(
+          ([key, delta]) => ({
+            key: `negotiationLeverage.${key}`,
+            label: `Negotiation leverage (${key})`,
+            previousValue: input.game.state.derived.negotiationLeverage[key] ?? 0,
+            newValue: nextNegotiationLeverage[key] ?? 0,
+            delta,
+            visibility: "derived" as const
+          })
+        ),
+        ...Object.entries(prepared.selectedOption.effectProfile.factionMomentumDeltas).map(
+          ([key, delta]) => ({
+            key: `factionMomentum.${key}`,
+            label: `Faction momentum (${key})`,
+            previousValue: input.game.state.derived.factionMomentum[key] ?? 0,
+            newValue: nextFactionMomentum[key] ?? 0,
+            delta,
+            visibility: "derived" as const
+          })
+        )
       ],
       updatedTracks: {
-        ...input.game.state.public.visibleTracks,
+        ...nextVisibleTracks,
         worldTension: prepared.nextWorldTension
       },
       escalated: prepared.tensionDelta >= 10,
+      sessionOutcome,
       recommendationLabels: artifacts.recommendationLabels,
       riskLabels: artifacts.riskLabels,
       llmNarrative: {
@@ -175,6 +262,10 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
       prepared,
       recommendedNextOptionIds: validatedRecommendedNextOptionIds,
       escalationRisk,
+      nextVisibleTracks,
+      nextNegotiationLeverage,
+      nextFactionMomentum,
+      sessionOutcome,
       resolution
     });
 
@@ -212,12 +303,16 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
         ? playableFactionOrder[(currentIndex + 1) % playableFactionOrder.length]
         : input.game.currentFactionId;
     const nextTurnNumber = input.game.turnNumber + 1;
-    const tensionDelta =
+    const fallbackTensionDelta =
       selectedOption.kind === "military_signal"
         ? 12
         : selectedOption.kind === "economic"
           ? 7
           : 4;
+    const tensionDelta =
+      selectedOption.effectProfile.worldTensionDelta !== 0
+        ? selectedOption.effectProfile.worldTensionDelta
+        : fallbackTensionDelta;
     const nextWorldTension = clampPercentage(
       input.game.state.public.worldTension + tensionDelta
     );
@@ -245,65 +340,91 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
     prepared: PreparedTurnContext;
     recommendedNextOptionIds: string[];
     escalationRisk: number;
+    nextVisibleTracks: Record<string, number>;
+    nextNegotiationLeverage: Record<string, number>;
+    nextFactionMomentum: Record<string, number>;
+    sessionOutcome: Game["state"]["derived"]["outcome"];
     resolution: ResolveTurnResult["resolution"];
   }): Game {
     const { game, prepared, resolution, scenario } = input;
+    const isCompleted = input.sessionOutcome.status === "ended";
+    const nextFactionId = isCompleted ? null : prepared.nextFactionId;
+    const nextWarnings = [
+      ...game.state.derived.warnings,
+      ...prepared.selectedOption.effectProfile.warningAdds,
+      ...(resolution.escalated ? ["Recent action increased escalation pressure."] : [])
+    ];
+    const uniqueWarnings = [...new Set(nextWarnings)];
 
     return gameSchema.parse({
       ...game,
+      status: isCompleted ? "completed" : game.status,
       turnNumber: prepared.nextTurnNumber,
-      phase: "briefing",
-      currentFactionId: prepared.nextFactionId,
+      phase: isCompleted ? "turn_complete" : "briefing",
+      currentFactionId: nextFactionId,
       state: {
         public: {
           ...game.state.public,
           turnNumber: prepared.nextTurnNumber,
-          phase: "briefing",
-          activeFactionId: prepared.nextFactionId,
+          phase: isCompleted ? "turn_complete" : "briefing",
+          activeFactionId: nextFactionId,
           worldTension: prepared.nextWorldTension,
           publicNarrative: resolution.llmNarrative.publicSummary,
           headline: resolution.llmNarrative.headline,
+          visibleTracks: input.nextVisibleTracks,
+          publicFlags: applyStringAddsAndRemoves({
+            current: game.state.public.publicFlags,
+            adds: prepared.selectedOption.effectProfile.publicFlagAdds,
+            removes: prepared.selectedOption.effectProfile.publicFlagRemoves
+          }),
+          revealedEvents: applyStringAddsAndRemoves({
+            current: game.state.public.revealedEvents,
+            adds: prepared.selectedOption.effectProfile.revealedEventAdds,
+            removes: []
+          }),
           updatedAt: prepared.resolvedAt
         },
         privateByPlayer: game.state.privateByPlayer.map((state) => ({
           ...state,
           turnNumber: prepared.nextTurnNumber,
           privateBriefing:
-            state.factionId === prepared.nextFactionId
+            isCompleted
+              ? input.sessionOutcome.summary ?? state.privateBriefing
+              : state.factionId === prepared.nextFactionId
               ? `Prepare for the next move. ${scenario.title} remains unresolved.`
               : state.factionId === input.actionFactionId
                 ? `Post-action assessment: ${prepared.selectedOption.title} increased pressure and drew fresh scrutiny.`
                 : state.privateBriefing,
           intelligence:
-            state.factionId === prepared.nextFactionId
+            !isCompleted && state.factionId === prepared.nextFactionId
               ? [
                   `Placeholder intelligence: ${prepared.nextFactionId} now faces the next decision window.`,
                   `Current world tension stands at ${prepared.nextWorldTension}%.`
                 ]
               : state.intelligence,
           availableOptions:
-            state.factionId === prepared.nextFactionId ? prepared.nextOptions : []
+            !isCompleted && state.factionId === prepared.nextFactionId ? prepared.nextOptions : []
         })),
         derived: {
           ...game.state.derived,
           turnNumber: prepared.nextTurnNumber,
           actingPlayerIds: game.players
-            .filter((player) => player.factionId === prepared.nextFactionId)
+            .filter((player) => player.factionId === nextFactionId)
             .map((player) => player.id),
-          legalActionIds: prepared.nextOptions.map((candidate) => candidate.id),
+          legalActionIds: isCompleted ? [] : prepared.nextOptions.map((candidate) => candidate.id),
           recommendedActionIds:
-            input.recommendedNextOptionIds.length > 0
+            isCompleted
+              ? []
+              : input.recommendedNextOptionIds.length > 0
               ? input.recommendedNextOptionIds
               : prepared.nextOptions
                   .filter((candidate) => (candidate.recommendationPercent ?? 0) >= 60)
                   .map((candidate) => candidate.id),
           escalationRiskPercent: input.escalationRisk,
-          warnings: resolution.escalated
-            ? [
-                ...game.state.derived.warnings,
-                "Recent action increased escalation pressure."
-              ]
-            : game.state.derived.warnings
+          negotiationLeverage: input.nextNegotiationLeverage,
+          factionMomentum: input.nextFactionMomentum,
+          outcome: input.sessionOutcome,
+          warnings: uniqueWarnings
         }
       },
       advisorAnswers: [],

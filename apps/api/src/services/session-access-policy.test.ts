@@ -122,6 +122,26 @@ const baseGame: Game = {
       escalationRiskPercent: 30,
       negotiationLeverage: {},
       factionMomentum: {},
+      outcome: {
+        status: "ongoing",
+        category: null,
+        title: null,
+        summary: null,
+        winningFactionId: null,
+        achievedAtTurn: null,
+        pressure: {
+          maturityPercent: 10,
+          decisiveOutcomePercent: 15,
+          deescalationOpportunityPercent: 45,
+          catastrophicRiskPercent: 25
+        },
+        publicObjectiveProgress: {
+          "faction-1": 50,
+          "faction-2": 50,
+          "faction-3": 50
+        },
+        metadata: {}
+      },
       warnings: [],
       metadata: {}
     }
