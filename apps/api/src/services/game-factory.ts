@@ -1,7 +1,16 @@
-import { gameSchema, type Game, type GameMode, type ScenarioDefinition } from "@wargame/shared";
-import { randomUUID } from "node:crypto";
+import {
+  gameSchema,
+  type CreateGameDebugConfig,
+  type Game,
+  type GameMode,
+  type ScenarioDefinition
+} from "@wargame/shared";
 import { ValidationError } from "../errors/app-error.js";
 import { buildAvailableOptions } from "./option-presentation-service.js";
+import {
+  createSessionDebugConfig,
+  generateSessionScopedId
+} from "./session-debug-service.js";
 
 type RequestedPlayer = {
   name: string;
@@ -17,11 +26,22 @@ type BuildGameFromScenarioInput = {
   mode: GameMode;
   requestedPlayers: RequestedPlayer[];
   targetGameLength: "short" | "medium" | "long";
+  debug?: CreateGameDebugConfig;
 };
 
 export function buildGameFromScenario(input: BuildGameFromScenarioInput): Game {
   const { now, mode, ownerUserId, requestedPlayers, scenario, targetGameLength } = input;
   const playableFactions = scenario.factions.filter((faction) => faction.isPlayable);
+  let sessionConfig: Game["sessionConfig"] = {
+    targetGameLength,
+    debug: createSessionDebugConfig({
+      scenarioId: scenario.id,
+      mode,
+      ownerUserId,
+      createdAt: now,
+      debug: input.debug
+    })
+  };
 
   if (playableFactions.length === 0) {
     throw new ValidationError("Scenario does not expose any playable factions.");
@@ -50,8 +70,14 @@ export function buildGameFromScenario(input: BuildGameFromScenarioInput): Game {
 
     assignedFactionIds.add(factionId);
 
+    const generatedPlayerId = generateSessionScopedId({
+      sessionConfig,
+      stream: "player"
+    });
+    sessionConfig = generatedPlayerId.sessionConfig;
+
     return {
-      id: randomUUID(),
+      id: generatedPlayerId.id,
       gameId: "",
       name: player.name,
       role: player.role,
@@ -70,8 +96,14 @@ export function buildGameFromScenario(input: BuildGameFromScenarioInput): Game {
     );
 
     for (const [index, faction] of remainingFactions.entries()) {
+      const generatedPlayerId = generateSessionScopedId({
+        sessionConfig,
+        stream: "player"
+      });
+      sessionConfig = generatedPlayerId.sessionConfig;
+
       players.push({
-        id: randomUUID(),
+        id: generatedPlayerId.id,
         gameId: "",
         name: `${faction.name} AI`,
         role: "ai",
@@ -87,7 +119,12 @@ export function buildGameFromScenario(input: BuildGameFromScenarioInput): Game {
     }
   }
 
-  const gameId = randomUUID();
+  const generatedGameId = generateSessionScopedId({
+    sessionConfig,
+    stream: "game"
+  });
+  sessionConfig = generatedGameId.sessionConfig;
+  const gameId = generatedGameId.id;
   const currentFactionId = players.find((player) => player.factionId)?.factionId ?? null;
   const openingDerivedState = {
     ...scenario.openingState.derivedState,
@@ -180,9 +217,7 @@ export function buildGameFromScenario(input: BuildGameFromScenarioInput): Game {
     lastResolution: null,
     createdAt: now,
     updatedAt: now,
-    sessionConfig: {
-      targetGameLength
-    },
+    sessionConfig,
     metadata: {
       scenarioSlug: scenario.slug
     }

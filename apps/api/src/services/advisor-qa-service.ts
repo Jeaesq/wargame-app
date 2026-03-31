@@ -10,6 +10,7 @@ import type {
   GameSessionRepository,
   ScenarioRepository
 } from "../repositories/contracts.js";
+import { generateSessionScopedId } from "./session-debug-service.js";
 import type { AdvisorService } from "./types.js";
 
 export class AdvisorQaService {
@@ -67,15 +68,22 @@ export class AdvisorQaService {
       throw new NotFoundError(`Game ${input.sessionId} was not found.`);
     }
 
+    const generatedAnswerId = generateSessionScopedId({
+      sessionConfig: game.sessionConfig,
+      stream: "advisor-answer"
+    });
+
     const answer = await this.advisorService.generateAdvisorAnswer({
       scenario,
       targetGameLength: game.sessionConfig.targetGameLength,
       question: input.question,
-      context
+      context,
+      answerId: generatedAnswerId.id
     });
 
     const updatedGame = gameSchema.parse({
       ...game,
+      sessionConfig: generatedAnswerId.sessionConfig,
       advisorAnswers: [...game.advisorAnswers, answer],
       updatedAt: this.now()
     });

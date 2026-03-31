@@ -35,6 +35,9 @@ export type AdvisorEvalFixture = {
     forbiddenTerms: string[];
     topicalTerms: string[];
     maxRecommendedOptionCount: number;
+    minimumRiskNotes?: number;
+    usefulnessTerms?: string[];
+    pacingTerms?: string[];
   };
 };
 
@@ -48,6 +51,10 @@ export type TurnEvalFixture = {
     allowedPrivatePlayerIds: string[];
     forbiddenTerms: string[];
     topicalTerms: string[];
+    minimumRecommendedOptionNoteCount?: number;
+    minimumDistinctRecommendedCategories?: number;
+    pacingTerms?: string[];
+    endStateTerms?: string[];
   };
 };
 
@@ -225,6 +232,48 @@ function createScenario(): ScenarioDefinition {
         recommendationPercent: 58,
         effectProfile: neutralEffectProfile,
         metadata: {}
+      },
+      {
+        id: "option-ussr-covert-pressure",
+        scenarioId: "scenario-cold-war-berlin-mvp",
+        factionId: "faction-ussr",
+        kind: "intelligence",
+        title: "Run a covert pressure probe",
+        summary: "Quietly test whether allied logistics can be disrupted without a public break.",
+        visibility: "private",
+        requirementTags: [],
+        consequenceHints: ["Ambiguity", "covert leverage"],
+        recommendationPercent: 61,
+        effectProfile: neutralEffectProfile,
+        metadata: {}
+      },
+      {
+        id: "option-ussr-media-campaign",
+        scenarioId: "scenario-cold-war-berlin-mvp",
+        factionId: "faction-ussr",
+        kind: "propaganda",
+        title: "Launch a media pressure campaign",
+        summary: "Frame the airlift as a provocation to harden domestic and bloc support.",
+        visibility: "public",
+        requirementTags: [],
+        consequenceHints: ["Domestic pressure", "narrative contest"],
+        recommendationPercent: 55,
+        effectProfile: neutralEffectProfile,
+        metadata: {}
+      },
+      {
+        id: "option-ussr-trade-friction",
+        scenarioId: "scenario-cold-war-berlin-mvp",
+        factionId: "faction-ussr",
+        kind: "economic",
+        title: "Increase trade friction",
+        summary: "Raise non-military costs around the corridor and supporting supply chains.",
+        visibility: "public",
+        requirementTags: [],
+        consequenceHints: ["economic pressure", "gradual squeeze"],
+        recommendationPercent: 57,
+        effectProfile: neutralEffectProfile,
+        metadata: {}
       }
     ],
     metadata: {}
@@ -258,6 +307,7 @@ function createContext(input: {
   publicState: Game["state"]["public"];
   visibleOptions: ChoiceOption[];
   visibleWarnings: string[];
+  visibleOutcome?: AdvisorVisibleContext["visibleOutcome"];
   question?: string;
 }): AdvisorVisibleContext {
   return {
@@ -266,25 +316,26 @@ function createContext(input: {
     factionId: input.factionId,
     playerId: input.factionId === "faction-usa" ? "player-usa" : "player-ussr",
     publicState: input.publicState,
-    visibleOutcome: {
-      status: "ongoing",
-      category: null,
-      title: null,
-      summary: null,
-      winningFactionId: null,
-      achievedAtTurn: null,
-      pressure: {
-        maturityPercent: 25,
-        decisiveOutcomePercent: 30,
-        deescalationOpportunityPercent: 40,
-        catastrophicRiskPercent: 50
+    visibleOutcome:
+      input.visibleOutcome ?? {
+        status: "ongoing",
+        category: null,
+        title: null,
+        summary: null,
+        winningFactionId: null,
+        achievedAtTurn: null,
+        pressure: {
+          maturityPercent: 25,
+          decisiveOutcomePercent: 30,
+          deescalationOpportunityPercent: 40,
+          catastrophicRiskPercent: 50
+        },
+        publicObjectiveProgress: {
+          "faction-usa": 50,
+          "faction-ussr": 50
+        },
+        metadata: {}
       },
-      publicObjectiveProgress: {
-        "faction-usa": 50,
-        "faction-ussr": 50
-      },
-      metadata: {}
-    },
     visibleOptions: input.visibleOptions,
     visibleWarnings: input.visibleWarnings,
     lastAdvisorAnswer: null
@@ -298,6 +349,9 @@ function createGame(input: {
   usaOptions: ChoiceOption[];
   ussrOptions: ChoiceOption[];
   targetGameLength: TargetGameLength;
+  derivedOutcome?: Game["state"]["derived"]["outcome"];
+  derivedWarnings?: string[];
+  escalationRiskPercent?: number;
 }): Game {
   const scenario = createScenario();
 
@@ -382,32 +436,34 @@ function createGame(input: {
             : input.ussrOptions
                 .filter((option) => (option.recommendationPercent ?? 0) >= 60)
                 .map((option) => option.id),
-        escalationRiskPercent: 55,
+        escalationRiskPercent: input.escalationRiskPercent ?? 55,
         negotiationLeverage: {},
         factionMomentum: {},
-        outcome: {
-          status: "ongoing",
-          category: null,
-          title: null,
-          summary: null,
-          winningFactionId: null,
-          achievedAtTurn: null,
-          pressure: {
-            maturityPercent: 42,
-            decisiveOutcomePercent: 34,
-            deescalationOpportunityPercent: 39,
-            catastrophicRiskPercent: 53
+        outcome:
+          input.derivedOutcome ?? {
+            status: "ongoing",
+            category: null,
+            title: null,
+            summary: null,
+            winningFactionId: null,
+            achievedAtTurn: null,
+            pressure: {
+              maturityPercent: 42,
+              decisiveOutcomePercent: 34,
+              deescalationOpportunityPercent: 39,
+              catastrophicRiskPercent: 53
+            },
+            publicObjectiveProgress: {
+              "faction-usa": 52,
+              "faction-ussr": 49
+            },
+            metadata: {}
           },
-          publicObjectiveProgress: {
-            "faction-usa": 52,
-            "faction-ussr": 49
-          },
-          metadata: {}
-        },
         warnings:
-          input.currentFactionId === "faction-usa"
+          input.derivedWarnings ??
+          (input.currentFactionId === "faction-usa"
             ? ["Public resolve is being tested."]
-            : ["A heavy-handed move may stiffen allied resolve."],
+            : ["A heavy-handed move may stiffen allied resolve."]),
         metadata: {}
       }
     },
@@ -416,7 +472,12 @@ function createGame(input: {
     createdAt: "1948-06-24T00:00:00.000Z",
     updatedAt: "1948-07-04T00:00:00.000Z",
     sessionConfig: {
-      targetGameLength: input.targetGameLength
+      targetGameLength: input.targetGameLength,
+      debug: {
+        mode: "off",
+        seed: null,
+        streamCounters: {}
+      }
     },
     metadata: {}
   };
@@ -427,6 +488,7 @@ export function createAdvisorEvalFixtures(): AdvisorEvalFixture[] {
   const expandAirlift = scenario.choiceCatalog[0]!;
   const publicWarning = scenario.choiceCatalog[1]!;
   const fighterEscort = scenario.choiceCatalog[2]!;
+  const offerTalks = scenario.choiceCatalog[4]!;
 
   return [
     {
@@ -461,7 +523,9 @@ export function createAdvisorEvalFixtures(): AdvisorEvalFixture[] {
           "not shown"
         ],
         topicalTerms: ["airlift", "berlin", "tension", "warning"],
-        maxRecommendedOptionCount: 2
+        maxRecommendedOptionCount: 2,
+        minimumRiskNotes: 2,
+        usefulnessTerms: ["visible", "option", "public state"]
       }
     },
     {
@@ -497,7 +561,63 @@ export function createAdvisorEvalFixtures(): AdvisorEvalFixture[] {
           "backend"
         ],
         topicalTerms: ["fighters", "airlift", "risk", "tension", "escalation"],
-        maxRecommendedOptionCount: 2
+        maxRecommendedOptionCount: 2,
+        minimumRiskNotes: 2,
+        usefulnessTerms: ["warning", "signal", "visible"],
+        pacingTerms: ["slower-burn crisis", "preserve flexibility"]
+      }
+    },
+    {
+      id: "advisor-berlin-what-matters-now",
+      name: "Advisor usefulness at a mature crisis moment",
+      input: {
+        scenario,
+        targetGameLength: "short",
+        question: "What matters most now if we still want to avoid disaster?",
+        context: createContext({
+          factionId: "faction-usa",
+          turnNumber: 7,
+          publicState: createPublicState({
+            turnNumber: 7,
+            worldTension: 82,
+            headline: "Berlin crisis nears an inflection point",
+            publicNarrative:
+              "Publicly visible pressure is now high enough that one more sharp signal could reshape the outcome."
+          }),
+          visibleOptions: [expandAirlift, fighterEscort, offerTalks],
+          visibleWarnings: [
+            "Escalation pressure is elevated.",
+            "A visible overreaction could close off de-escalation options."
+          ],
+          visibleOutcome: {
+            status: "ongoing",
+            category: null,
+            title: null,
+            summary: null,
+            winningFactionId: null,
+            achievedAtTurn: null,
+            pressure: {
+              maturityPercent: 78,
+              decisiveOutcomePercent: 66,
+              deescalationOpportunityPercent: 61,
+              catastrophicRiskPercent: 74
+            },
+            publicObjectiveProgress: {
+              "faction-usa": 49,
+              "faction-ussr": 55
+            },
+            metadata: {}
+          }
+        })
+      },
+      expectations: {
+        allowedOptionIds: [expandAirlift.id, fighterEscort.id, offerTalks.id],
+        forbiddenTerms: ["secret", "classified", "intercepted", "backend"],
+        topicalTerms: ["de-escalation", "catastrophic", "visible", "off-ramp", "leverage"],
+        maxRecommendedOptionCount: 2,
+        minimumRiskNotes: 2,
+        usefulnessTerms: ["what matters most", "visible", "off-ramp", "leverage"],
+        pacingTerms: ["decisive progress", "automatic ending conditions"]
       }
     }
   ];
@@ -509,6 +629,9 @@ export function createTurnEvalFixtures(): TurnEvalFixture[] {
   const fighterEscort = scenario.choiceCatalog[2]!;
   const tightenCheckpoints = scenario.choiceCatalog[3]!;
   const offerTalks = scenario.choiceCatalog[4]!;
+  const covertPressure = scenario.choiceCatalog[5]!;
+  const mediaCampaign = scenario.choiceCatalog[6]!;
+  const tradeFriction = scenario.choiceCatalog[7]!;
 
   const diplomaticPublicState = createPublicState({
     turnNumber: 3,
@@ -543,6 +666,62 @@ export function createTurnEvalFixtures(): TurnEvalFixture[] {
     ussrOptions: [tightenCheckpoints, offerTalks],
     targetGameLength: "long"
   });
+  const diversityPublicState = createPublicState({
+    turnNumber: 5,
+    activeFactionId: "faction-usa",
+    worldTension: 68,
+    headline: "Berlin pressure spreads across military and political channels",
+    publicNarrative:
+      "The next Soviet move could come through negotiation, covert pressure, propaganda, or economic friction.",
+    visibleTracks: {
+      alliedResolve: 69,
+      diplomaticPressure: 64
+    }
+  });
+  const diversityGame = createGame({
+    turnNumber: 5,
+    currentFactionId: "faction-usa",
+    publicState: diversityPublicState,
+    usaOptions: [expandAirlift, fighterEscort],
+    ussrOptions: [tightenCheckpoints, covertPressure, mediaCampaign, tradeFriction],
+    targetGameLength: "medium"
+  });
+  const endgamePublicState = createPublicState({
+    turnNumber: 8,
+    activeFactionId: "faction-usa",
+    worldTension: 81,
+    headline: "Berlin crisis enters a dangerous endgame",
+    publicNarrative:
+      "Visible pressure is high enough that either a credible off-ramp or a misstep could determine the outcome."
+  });
+  const endgameGame = createGame({
+    turnNumber: 8,
+    currentFactionId: "faction-usa",
+    publicState: endgamePublicState,
+    usaOptions: [expandAirlift, fighterEscort],
+    ussrOptions: [tightenCheckpoints, offerTalks, covertPressure],
+    targetGameLength: "short",
+    escalationRiskPercent: 77,
+    derivedOutcome: {
+      status: "ongoing",
+      category: null,
+      title: null,
+      summary: null,
+      winningFactionId: null,
+      achievedAtTurn: null,
+      pressure: {
+        maturityPercent: 82,
+        decisiveOutcomePercent: 68,
+        deescalationOpportunityPercent: 63,
+        catastrophicRiskPercent: 76
+      },
+      publicObjectiveProgress: {
+        "faction-usa": 48,
+        "faction-ussr": 56
+      },
+      metadata: {}
+    }
+  });
 
   const diplomaticAction: TurnAction = {
     id: "action-diplomatic-1",
@@ -567,6 +746,32 @@ export function createTurnEvalFixtures(): TurnEvalFixture[] {
     kind: fighterEscort.kind,
     submittedAt: "1948-07-10T00:00:00.000Z",
     declaredIntent: "Deter harassment through a visible military signal.",
+    parameters: {},
+    clientContext: {}
+  };
+  const diversityAction: TurnAction = {
+    id: "action-diversity-1",
+    gameId: diversityGame.id,
+    turnNumber: diversityGame.turnNumber,
+    playerId: "player-usa",
+    factionId: "faction-usa",
+    optionId: expandAirlift.id,
+    kind: expandAirlift.kind,
+    submittedAt: "1948-07-08T00:00:00.000Z",
+    declaredIntent: "Keep access open while forcing Moscow to show its hand.",
+    parameters: {},
+    clientContext: {}
+  };
+  const endgameAction: TurnAction = {
+    id: "action-endgame-1",
+    gameId: endgameGame.id,
+    turnNumber: endgameGame.turnNumber,
+    playerId: "player-usa",
+    factionId: "faction-usa",
+    optionId: fighterEscort.id,
+    kind: fighterEscort.kind,
+    submittedAt: "1948-07-12T00:00:00.000Z",
+    declaredIntent: "Deter interference while keeping an off-ramp open if one appears.",
     parameters: {},
     clientContext: {}
   };
@@ -600,7 +805,8 @@ export function createTurnEvalFixtures(): TurnEvalFixture[] {
         allowedPrivateFactionIds: ["faction-usa"],
         allowedPrivatePlayerIds: ["player-usa"],
         forbiddenTerms: ["secret soviet order", "backend", "hidden rule", "off-screen coup"],
-        topicalTerms: ["airlift", "berlin", "pressure", "checkpoint", "talks"]
+        topicalTerms: ["airlift", "berlin", "pressure", "checkpoint", "talks"],
+        minimumRecommendedOptionNoteCount: 1
       }
     },
     {
@@ -631,7 +837,81 @@ export function createTurnEvalFixtures(): TurnEvalFixture[] {
         allowedPrivateFactionIds: ["faction-usa"],
         allowedPrivatePlayerIds: ["player-usa"],
         forbiddenTerms: ["secret soviet order", "backend", "automatic victory", "war already started"],
-        topicalTerms: ["fighters", "escort", "airlift", "escalation", "berlin"]
+        topicalTerms: ["fighters", "escort", "airlift", "escalation", "berlin"],
+        minimumRecommendedOptionNoteCount: 1,
+        pacingTerms: ["longer contest", "pressure and signaling"]
+      }
+    },
+    {
+      id: "turn-berlin-option-diversity",
+      name: "Turn narration keeps diverse next options legible",
+      input: {
+        game: diversityGame,
+        publicView: projectSessionForSelection(diversityGame, { view: "public" }),
+        actingFactionView: projectSessionForSelection(diversityGame, {
+          playerId: "player-usa",
+          factionId: "faction-usa",
+          view: "faction"
+        }),
+        scenario,
+        targetGameLength: "medium",
+        action: diversityAction,
+        actingPlayer: diversityGame.players[0]!,
+        actingPrivateState: diversityGame.state.privateByPlayer[0]!,
+        selectedOption: expandAirlift,
+        nextFactionId: "faction-ussr",
+        nextTurnNumber: 6,
+        tensionDelta: 4,
+        nextWorldTension: 72,
+        nextOptions: [tightenCheckpoints, covertPressure, mediaCampaign, tradeFriction]
+      },
+      expectations: {
+        allowedNextOptionIds: [
+          tightenCheckpoints.id,
+          covertPressure.id,
+          mediaCampaign.id,
+          tradeFriction.id
+        ],
+        allowedPrivateFactionIds: ["faction-usa"],
+        allowedPrivatePlayerIds: ["player-usa"],
+        forbiddenTerms: ["secret soviet order", "backend", "hidden rule"],
+        topicalTerms: ["checkpoint", "covert", "media", "economic", "berlin"],
+        minimumRecommendedOptionNoteCount: 2,
+        minimumDistinctRecommendedCategories: 2
+      }
+    },
+    {
+      id: "turn-berlin-endstate-plausibility",
+      name: "Turn narration acknowledges an endgame without claiming a premature ending",
+      input: {
+        game: endgameGame,
+        publicView: projectSessionForSelection(endgameGame, { view: "public" }),
+        actingFactionView: projectSessionForSelection(endgameGame, {
+          playerId: "player-usa",
+          factionId: "faction-usa",
+          view: "faction"
+        }),
+        scenario,
+        targetGameLength: "short",
+        action: endgameAction,
+        actingPlayer: endgameGame.players[0]!,
+        actingPrivateState: endgameGame.state.privateByPlayer[0]!,
+        selectedOption: fighterEscort,
+        nextFactionId: "faction-ussr",
+        nextTurnNumber: 9,
+        tensionDelta: 12,
+        nextWorldTension: 93,
+        nextOptions: [tightenCheckpoints, offerTalks, covertPressure]
+      },
+      expectations: {
+        allowedNextOptionIds: [tightenCheckpoints.id, offerTalks.id, covertPressure.id],
+        allowedPrivateFactionIds: ["faction-usa"],
+        allowedPrivatePlayerIds: ["player-usa"],
+        forbiddenTerms: ["automatic victory", "war already started", "backend", "off-screen ending"],
+        topicalTerms: ["endgame", "off-ramp", "escalation", "danger", "berlin"],
+        minimumRecommendedOptionNoteCount: 1,
+        pacingTerms: ["decisive near-term phase"],
+        endStateTerms: ["off-ramp", "endgame", "danger"]
       }
     }
   ];

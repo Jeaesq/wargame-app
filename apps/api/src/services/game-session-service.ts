@@ -78,7 +78,8 @@ export class GameSessionService {
       scenario,
       mode: input.mode,
       requestedPlayers: input.players,
-      targetGameLength: input.targetGameLength
+      targetGameLength: input.targetGameLength,
+      debug: input.debug
     });
 
     await this.gameSessionRepository.saveSession(session);

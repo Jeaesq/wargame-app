@@ -7,7 +7,6 @@ import {
   type Game,
   type TurnResolution
 } from "@wargame/shared";
-import { randomUUID } from "node:crypto";
 import { ForbiddenError, NotFoundError, ValidationError } from "../errors/app-error.js";
 import type {
   GameSessionRepository,
@@ -19,6 +18,7 @@ import type {
   BotStrategyService,
   TurnResolutionService
 } from "./types.js";
+import { generateSessionScopedId } from "./session-debug-service.js";
 
 export class TurnSubmissionService {
   constructor(
@@ -78,8 +78,12 @@ export class TurnSubmissionService {
       throw new ValidationError(`Option ${input.optionId} is not available this turn.`);
     }
 
+    const generatedActionId = generateSessionScopedId({
+      sessionConfig: game.sessionConfig,
+      stream: "turn-action"
+    });
     const action = turnActionSchema.parse({
-      id: randomUUID(),
+      id: generatedActionId.id,
       gameId: game.id,
       turnNumber: game.turnNumber,
       playerId: input.playerId,
@@ -93,7 +97,10 @@ export class TurnSubmissionService {
     });
 
     const result = await this.turnResolutionService.resolveTurn({
-      game,
+      game: {
+        ...game,
+        sessionConfig: generatedActionId.sessionConfig
+      },
       scenario,
       action
     });
@@ -127,8 +134,12 @@ export class TurnSubmissionService {
           );
 
           if (botOption) {
+            const generatedBotActionId = generateSessionScopedId({
+              sessionConfig: currentGame.sessionConfig,
+              stream: "turn-action"
+            });
             const botAction = turnActionSchema.parse({
-              id: randomUUID(),
+              id: generatedBotActionId.id,
               gameId: currentGame.id,
               turnNumber: currentGame.turnNumber,
               playerId: botPlayer.id,
@@ -144,7 +155,10 @@ export class TurnSubmissionService {
             });
 
             const botResult = await this.turnResolutionService.resolveTurn({
-              game: currentGame,
+              game: {
+                ...currentGame,
+                sessionConfig: generatedBotActionId.sessionConfig
+              },
               scenario,
               action: botAction
             });

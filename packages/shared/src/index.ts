@@ -66,6 +66,7 @@ export const outcomeCategorySchema = z.enum([
   "catastrophic_escalation"
 ]);
 export const outcomeStatusSchema = z.enum(["ongoing", "ended"]);
+export const deterministicSessionModeSchema = z.enum(["off", "seeded"]);
 
 export const choiceEffectProfileSchema = z.object({
   worldTensionDelta: z.number().int().min(-100).max(100).default(0),
@@ -107,6 +108,17 @@ export const sessionOutcomeSchema = z.object({
   pressure: sessionOutcomePressureSchema,
   publicObjectiveProgress: statsMapSchema,
   metadata: metadataSchema
+});
+
+export const sessionDebugConfigSchema = z.object({
+  mode: deterministicSessionModeSchema.default("off"),
+  seed: z.string().min(1).nullable().default(null),
+  streamCounters: z.record(z.string(), z.number().int().nonnegative()).default({})
+});
+
+export const createGameDebugConfigSchema = z.object({
+  deterministicMode: z.boolean().default(false),
+  seed: z.string().min(1).optional()
 });
 
 export const factionSchema = z.object({
@@ -426,7 +438,12 @@ export const gameSchema = z.object({
   createdAt: isoTimestampSchema,
   updatedAt: isoTimestampSchema,
   sessionConfig: z.object({
-    targetGameLength: targetGameLengthSchema.default("medium")
+    targetGameLength: targetGameLengthSchema.default("medium"),
+    debug: sessionDebugConfigSchema.default({
+      mode: "off",
+      seed: null,
+      streamCounters: {}
+    })
   }),
   metadata: metadataSchema
 });
@@ -435,6 +452,7 @@ export const createGameRequestSchema = z.object({
   scenarioId: z.string().min(1),
   mode: gameModeSchema,
   targetGameLength: targetGameLengthSchema.default("medium"),
+  debug: createGameDebugConfigSchema.optional(),
   players: z
     .array(
       z.object({
@@ -494,6 +512,7 @@ export type ScenarioComplexity = z.infer<typeof scenarioComplexitySchema>;
 export type TargetGameLength = z.infer<typeof targetGameLengthSchema>;
 export type OutcomeCategory = z.infer<typeof outcomeCategorySchema>;
 export type OutcomeStatus = z.infer<typeof outcomeStatusSchema>;
+export type DeterministicSessionMode = z.infer<typeof deterministicSessionModeSchema>;
 export type Game = z.infer<typeof gameSchema>;
 export type Player = z.infer<typeof playerSchema>;
 export type Faction = z.infer<typeof factionSchema>;
@@ -509,6 +528,7 @@ export type ChoiceEffectProfile = z.infer<typeof choiceEffectProfileSchema>;
 export type ScenarioObjective = z.infer<typeof scenarioObjectiveSchema>;
 export type SessionOutcome = z.infer<typeof sessionOutcomeSchema>;
 export type SessionOutcomePressure = z.infer<typeof sessionOutcomePressureSchema>;
+export type SessionDebugConfig = z.infer<typeof sessionDebugConfigSchema>;
 export type TurnGenerationArtifacts = z.infer<typeof turnGenerationArtifactsSchema>;
 export type RecommendedOptionNote = z.infer<typeof recommendedOptionNoteSchema>;
 export type WorldUpdateSuggestion = z.infer<typeof worldUpdateSuggestionSchema>;
@@ -517,6 +537,7 @@ export type AdvisorResponsePayload = z.infer<typeof advisorResponsePayloadSchema
 export type ResolvedActionSummary = z.infer<typeof resolvedActionSummarySchema>;
 export type ResolvedActor = z.infer<typeof resolvedActorSchema>;
 export type StateChange = z.infer<typeof stateChangeSchema>;
+export type CreateGameDebugConfig = z.infer<typeof createGameDebugConfigSchema>;
 export type CreateGameRequest = z.infer<typeof createGameRequestSchema>;
 export type GamesListResponse = z.infer<typeof gamesListResponseSchema>;
 export type ScenariosListResponse = z.infer<typeof scenariosListResponseSchema>;

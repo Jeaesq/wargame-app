@@ -2,7 +2,6 @@ import {
   advisorAnswerSchema,
   advisorResponsePayloadSchema
 } from "@wargame/shared";
-import { randomUUID } from "node:crypto";
 import { logInfo } from "../logger.js";
 import type { AdvisorResponseProvider } from "../providers/types.js";
 import type { AdvisorService, GenerateAdvisorAnswerInput } from "./types.js";
@@ -45,7 +44,7 @@ export class ProviderBackedAdvisorService implements AdvisorService {
     });
 
     return advisorAnswerSchema.parse({
-      answerId: randomUUID(),
+      answerId: input.answerId ?? `advisor-${input.context.gameId}-${input.context.turnNumber}`,
       gameId: input.context.gameId,
       turnNumber: input.context.turnNumber,
       perspectiveFactionId: input.context.factionId,

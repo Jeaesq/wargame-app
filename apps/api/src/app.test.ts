@@ -62,6 +62,36 @@ async function createSoloGame() {
   };
 }
 
+async function createSeededSoloGame(seed: string) {
+  const services = createServices();
+  const createPayload: CreateGameRequest = {
+    scenarioId: "scenario-cold-war-berlin-mvp",
+    mode: "solo",
+    targetGameLength: "medium",
+    debug: {
+      deterministicMode: true,
+      seed
+    },
+    players: [
+      {
+        name: "Player One",
+        role: "human",
+        factionId: "faction-usa"
+      }
+    ]
+  };
+
+  const game = await services.gameSessionService.createSession(
+    createPayload,
+    defaultTestUserId
+  );
+
+  return {
+    services,
+    game: gameSchema.parse(game)
+  };
+}
+
 async function createHeadToHeadGame() {
   const services = createServices();
   const createPayload: CreateGameRequest = {
@@ -97,6 +127,7 @@ test("create session and load session overview", async () => {
   const { services, game: createdGame } = await createSoloGame();
 
   assert.equal(createdGame.sessionConfig.targetGameLength, "medium");
+  assert.equal(createdGame.sessionConfig.debug.mode, "off");
   assert.equal(createdGame.ownerUserId, defaultTestUserId);
   assert.equal(createdGame.turnNumber, 1);
   assert.equal(createdGame.mode, "solo");
@@ -118,6 +149,89 @@ test("create session and load session overview", async () => {
     ),
     true
   );
+});
+
+test("seeded debug sessions reproduce ids and counters across identical runs", async () => {
+  const seed = "cold-war-replay-001";
+  const [{ services: servicesA, game: gameA }, { services: servicesB, game: gameB }] =
+    await Promise.all([createSeededSoloGame(seed), createSeededSoloGame(seed)]);
+
+  assert.equal(gameA.sessionConfig.debug.mode, "seeded");
+  assert.equal(gameA.sessionConfig.debug.seed, seed);
+  assert.equal(gameA.id, gameB.id);
+  assert.deepEqual(
+    gameA.players.map((player) => player.id),
+    gameB.players.map((player) => player.id)
+  );
+  assert.deepEqual(gameA.sessionConfig.debug.streamCounters, {
+    player: 2,
+    game: 1
+  });
+
+  const humanPlayerA = gameA.players.find((player) => player.role === "human");
+  const humanPlayerB = gameB.players.find((player) => player.role === "human");
+  assert.ok(humanPlayerA);
+  assert.ok(humanPlayerB);
+
+  const [answerA, answerB] = await Promise.all([
+    servicesA.advisorQaService.askQuestion({
+      sessionId: gameA.id,
+      requestUserId: defaultTestUserId,
+      playerId: humanPlayerA.id,
+      factionId: humanPlayerA.factionId,
+      question: "What matters most right now?"
+    }),
+    servicesB.advisorQaService.askQuestion({
+      sessionId: gameB.id,
+      requestUserId: defaultTestUserId,
+      playerId: humanPlayerB.id,
+      factionId: humanPlayerB.factionId,
+      question: "What matters most right now?"
+    })
+  ]);
+
+  assert.equal(answerA.answerId, answerB.answerId);
+
+  const [submissionA, submissionB] = await Promise.all([
+    servicesA.turnSubmissionService.submitTurn(gameA.id, defaultTestUserId, {
+      playerId: humanPlayerA.id,
+      factionId: humanPlayerA.factionId ?? "faction-usa",
+      optionId: "option-usa-airlift",
+      declaredIntent: "Demonstrate resolve without ground escalation.",
+      parameters: {},
+      clientContext: {
+        source: "seeded-test"
+      }
+    }),
+    servicesB.turnSubmissionService.submitTurn(gameB.id, defaultTestUserId, {
+      playerId: humanPlayerB.id,
+      factionId: humanPlayerB.factionId ?? "faction-usa",
+      optionId: "option-usa-airlift",
+      declaredIntent: "Demonstrate resolve without ground escalation.",
+      parameters: {},
+      clientContext: {
+        source: "seeded-test"
+      }
+    })
+  ]);
+
+  assert.equal(submissionA.resolution.actionId, submissionB.resolution.actionId);
+  assert.equal(submissionA.resolution.id, submissionB.resolution.id);
+  assert.equal(
+    submissionA.followupResolutions[0]?.actionId,
+    submissionB.followupResolutions[0]?.actionId
+  );
+  assert.equal(
+    submissionA.followupResolutions[0]?.id,
+    submissionB.followupResolutions[0]?.id
+  );
+  assert.deepEqual(submissionA.game.sessionConfig.debug.streamCounters, {
+    player: 2,
+    game: 1,
+    "advisor-answer": 1,
+    "turn-action": 2,
+    "turn-resolution": 2
+  });
 });
 
 test("session retrieval projects public and faction-private views explicitly", async () => {

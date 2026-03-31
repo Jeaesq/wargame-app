@@ -267,7 +267,12 @@ const game: Game = {
   createdAt: "1948-06-24T00:00:00.000Z",
   updatedAt: "1948-06-24T00:00:00.000Z",
   sessionConfig: {
-    targetGameLength: "medium"
+    targetGameLength: "medium",
+    debug: {
+      mode: "off",
+      seed: null,
+      streamCounters: {}
+    }
   },
   metadata: {}
 };

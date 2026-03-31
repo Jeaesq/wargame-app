@@ -66,6 +66,19 @@ function findMatchedTerms(text: string, terms: string[]): string[] {
   return terms.filter((term) => text.includes(normalizeText(term)));
 }
 
+function getOptionCategory(option: {
+  kind: string;
+  metadata?: Record<string, unknown>;
+}) {
+  const presentationCategory = option.metadata?.presentationCategory;
+
+  if (typeof presentationCategory === "string" && presentationCategory.length > 0) {
+    return presentationCategory;
+  }
+
+  return option.kind;
+}
+
 function createFinding(
   severity: EvalSeverity,
   category: EvalCategory,
@@ -193,6 +206,52 @@ export function evaluateAdvisorResponse(
         "qualitative",
         fixture.id,
         "Advisor confidenceLabel is high but confidencePercent is relatively low."
+      )
+    );
+  }
+
+  if (
+    (fixture.expectations.minimumRiskNotes ?? 0) > 0 &&
+    payload.riskNotes.length < (fixture.expectations.minimumRiskNotes ?? 0)
+  ) {
+    findings.push(
+      createFinding(
+        "warn",
+        "qualitative",
+        fixture.id,
+        `Advisor riskNotes are thinner than expected for this case; expected at least ${fixture.expectations.minimumRiskNotes}.`
+      )
+    );
+  }
+
+  const matchedUsefulnessTerms = findMatchedTerms(
+    combinedText,
+    fixture.expectations.usefulnessTerms ?? []
+  );
+
+  if (
+    (fixture.expectations.usefulnessTerms?.length ?? 0) > 0 &&
+    matchedUsefulnessTerms.length === 0
+  ) {
+    findings.push(
+      createFinding(
+        "warn",
+        "qualitative",
+        fixture.id,
+        "Advisor answer does not feel concretely useful for the question asked."
+      )
+    );
+  }
+
+  const matchedPacingTerms = findMatchedTerms(combinedText, fixture.expectations.pacingTerms ?? []);
+
+  if ((fixture.expectations.pacingTerms?.length ?? 0) > 0 && matchedPacingTerms.length === 0) {
+    findings.push(
+      createFinding(
+        "warn",
+        "qualitative",
+        fixture.id,
+        "Advisor answer does not reflect the pacing guidance for this fixture."
       )
     );
   }
@@ -330,6 +389,73 @@ export function evaluateTurnArtifacts(
         "qualitative",
         fixture.id,
         "recommendedOptionNotes should stay concise and gameplay-usable."
+      )
+    );
+  }
+
+  if (
+    (fixture.expectations.minimumRecommendedOptionNoteCount ?? 0) > 0 &&
+    payload.recommendedOptionNotes.length < (fixture.expectations.minimumRecommendedOptionNoteCount ?? 0)
+  ) {
+    findings.push(
+      createFinding(
+        "warn",
+        "qualitative",
+        fixture.id,
+        `Turn output produced fewer recommendation notes than expected for this case.`
+      )
+    );
+  }
+
+  if ((fixture.expectations.minimumDistinctRecommendedCategories ?? 0) > 0) {
+    const optionById = new Map(
+      fixture.input.nextOptions.map((option) => [option.id, option])
+    );
+    const referencedOptionIds = new Set([
+      ...payload.recommendedNextOptionIds,
+      ...payload.recommendedOptionNotes.map((note) => note.optionId)
+    ]);
+    const distinctCategories = new Set(
+      [...referencedOptionIds]
+        .map((optionId) => optionById.get(optionId))
+        .filter((option): option is NonNullable<typeof option> => Boolean(option))
+        .map((option) => getOptionCategory(option))
+    );
+
+    if (distinctCategories.size < (fixture.expectations.minimumDistinctRecommendedCategories ?? 0)) {
+      findings.push(
+        createFinding(
+          "warn",
+          "qualitative",
+          fixture.id,
+          "Recommended follow-up options do not preserve enough strategic diversity for this fixture."
+        )
+      );
+    }
+  }
+
+  const matchedPacingTerms = findMatchedTerms(combinedText, fixture.expectations.pacingTerms ?? []);
+
+  if ((fixture.expectations.pacingTerms?.length ?? 0) > 0 && matchedPacingTerms.length === 0) {
+    findings.push(
+      createFinding(
+        "warn",
+        "qualitative",
+        fixture.id,
+        "Turn narration does not clearly reflect pacing guidance for this fixture."
+      )
+    );
+  }
+
+  const matchedEndStateTerms = findMatchedTerms(combinedText, fixture.expectations.endStateTerms ?? []);
+
+  if ((fixture.expectations.endStateTerms?.length ?? 0) > 0 && matchedEndStateTerms.length === 0) {
+    findings.push(
+      createFinding(
+        "warn",
+        "qualitative",
+        fixture.id,
+        "Turn narration does not clearly acknowledge the end-state pressure in this fixture."
       )
     );
   }

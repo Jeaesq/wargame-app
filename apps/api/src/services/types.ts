@@ -43,6 +43,7 @@ export type GenerateAdvisorAnswerInput = {
   targetGameLength: TargetGameLength;
   question: string;
   context: AdvisorVisibleContext;
+  answerId?: string;
 };
 
 export interface AdvisorService {

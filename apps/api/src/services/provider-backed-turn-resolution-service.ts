@@ -7,12 +7,12 @@ import {
   type Player,
   type PrivatePlayerState
 } from "@wargame/shared";
-import { randomUUID } from "node:crypto";
 import { ValidationError } from "../errors/app-error.js";
 import { logInfo } from "../logger.js";
 import type { TurnGenerationProvider } from "../providers/types.js";
 import { projectSessionForSelection } from "../repositories/session-visibility-projection.js";
 import { buildAvailableOptions } from "./option-presentation-service.js";
+import { generateSessionScopedId } from "./session-debug-service.js";
 import { evaluateSessionOutcome } from "./session-outcome-service.js";
 import type {
   ResolveTurnInput,
@@ -174,9 +174,13 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
     const validatedRecommendedOptionNotes = recommendedOptionNotes.filter((note) =>
       curatedNextOptions.some((candidate) => candidate.id === note.optionId)
     );
+    const generatedResolutionId = generateSessionScopedId({
+      sessionConfig: input.game.sessionConfig,
+      stream: "turn-resolution"
+    });
 
     const resolution = turnResolutionSchema.parse({
-      id: randomUUID(),
+      id: generatedResolutionId.id,
       gameId: input.game.id,
       turnNumber: input.game.turnNumber,
       actionId: input.action.id,
@@ -280,6 +284,7 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
       scenario: input.scenario,
       actionFactionId: input.action.factionId,
       prepared,
+      sessionConfig: generatedResolutionId.sessionConfig,
       recommendedNextOptionIds: validatedRecommendedNextOptionIds,
       recommendedOptionNotes: validatedRecommendedOptionNotes,
       escalationRisk,
@@ -354,6 +359,7 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
     scenario: ResolveTurnInput["scenario"];
     actionFactionId: string;
     prepared: PreparedTurnContext;
+    sessionConfig: Game["sessionConfig"];
     recommendedNextOptionIds: string[];
     recommendedOptionNotes: Array<{ optionId: string; rationale: string }>;
     escalationRisk: number;
@@ -466,6 +472,7 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
       },
       advisorAnswers: [],
       lastResolution: resolution,
+      sessionConfig: input.sessionConfig,
       updatedAt: prepared.resolvedAt
     });
   }

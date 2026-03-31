@@ -1,5 +1,9 @@
 import { MockAdvisorResponseProvider } from "../providers/mock/mock-advisor-response-provider.js";
 import { MockTurnGenerationProvider } from "../providers/mock/mock-turn-generation-provider.js";
+import { getAppConfig } from "../config.js";
+import { OpenAIAdvisorResponseProvider } from "../providers/openai/openai-advisor-response-provider.js";
+import { OpenAITurnGenerationProvider } from "../providers/openai/openai-turn-generation-provider.js";
+import { OpenAIResponsesClient } from "../providers/openai/response-client.js";
 import type {
   AdvisorResponseProvider,
   TurnGenerationProvider
@@ -19,6 +23,44 @@ type EvalSummary = {
   errorCount: number;
   warningCount: number;
 };
+
+type EvalProviderMode = "mock" | "openai";
+
+function getEvalProviderMode(): EvalProviderMode {
+  return process.env.AI_EVAL_PROVIDER === "openai" ? "openai" : "mock";
+}
+
+function createEvalProviders(): {
+  advisorProvider: AdvisorResponseProvider;
+  turnProvider: TurnGenerationProvider;
+  providerMode: EvalProviderMode;
+} {
+  const providerMode = getEvalProviderMode();
+
+  if (providerMode === "mock") {
+    return {
+      advisorProvider: new MockAdvisorResponseProvider(),
+      turnProvider: new MockTurnGenerationProvider(),
+      providerMode
+    };
+  }
+
+  const config = getAppConfig();
+
+  if (!config.providers.openai) {
+    throw new Error(
+      "AI_EVAL_PROVIDER=openai requires OPENAI_API_KEY and OPENAI_MODEL to be configured."
+    );
+  }
+
+  const client = new OpenAIResponsesClient(config.providers.openai);
+
+  return {
+    advisorProvider: new OpenAIAdvisorResponseProvider(client),
+    turnProvider: new OpenAITurnGenerationProvider(client),
+    providerMode
+  };
+}
 
 async function runAdvisorEvals(
   provider: AdvisorResponseProvider
@@ -91,8 +133,8 @@ function printSummary(title: string, summary: EvalSummary) {
 }
 
 async function main() {
-  const advisorProvider = new MockAdvisorResponseProvider();
-  const turnProvider = new MockTurnGenerationProvider();
+  const { advisorProvider, turnProvider, providerMode } = createEvalProviders();
+  console.log(`Running local AI evals with provider mode: ${providerMode}`);
 
   const advisorSummary = summarize(await runAdvisorEvals(advisorProvider));
   const turnSummary = summarize(await runTurnEvals(turnProvider));

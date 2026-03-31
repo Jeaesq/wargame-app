@@ -34,6 +34,11 @@ export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
       normalizedQuestion.includes("tension") ||
       normalizedQuestion.includes("situation") ||
       normalizedQuestion.includes("state");
+    const asksWhatMatters =
+      normalizedQuestion.includes("matter") ||
+      normalizedQuestion.includes("priority") ||
+      normalizedQuestion.includes("focus");
+    const visibleOutcome = input.context.visibleOutcome;
 
     let shortAnswer = "The visible situation remains manageable but tense.";
     let rationale = [
@@ -67,6 +72,20 @@ export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
       }
 
       confidenceLabel = publicState.worldTension >= 60 ? "high" : "medium";
+    } else if (asksWhatMatters) {
+      shortAnswer =
+        visibleOutcome.pressure.deescalationOpportunityPercent >= 60
+          ? "What matters most now is whether you convert the visible off-ramp into controlled de-escalation."
+          : visibleOutcome.pressure.catastrophicRiskPercent >= 70
+            ? "What matters most now is avoiding a visible step that tips the crisis into catastrophic escalation."
+            : "What matters most now is changing leverage without losing control of escalation.";
+      summary = shortAnswer;
+      rationale = [
+        `Visible scenario maturity is ${visibleOutcome.pressure.maturityPercent}%.`,
+        `Visible catastrophic risk is ${visibleOutcome.pressure.catastrophicRiskPercent}% and de-escalation opportunity is ${visibleOutcome.pressure.deescalationOpportunityPercent}%.`,
+        "The visible question is less about hidden intent and more about whether the next move creates leverage or opens an off-ramp."
+      ];
+      confidenceLabel = "medium";
     } else if (asksAboutOptions && topOption) {
       shortAnswer = `The strongest visible option is ${topOption.title.toLowerCase()}.`;
       summary = `Based on visible state, ${topOption.title.toLowerCase()} is the clearest recommendation.`;
@@ -101,7 +120,7 @@ export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
       summary,
       shortAnswer,
       rationale:
-        topOption || asksAboutRisk || asksAboutTension
+        topOption || asksAboutRisk || asksAboutTension || asksWhatMatters
           ? rationale
           : [
               "No visible option or public-state signal was strong enough to support a clearer answer."
