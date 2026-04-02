@@ -149,6 +149,39 @@ async function createSuezSoloGame() {
   };
 }
 
+async function createSeededSuezSoloGame(
+  seed: string,
+  factionId = "faction-anglo-french"
+) {
+  const services = createServices();
+  const createPayload: CreateGameRequest = {
+    scenarioId: "scenario-suez-crisis-mvp",
+    mode: "solo",
+    targetGameLength: "medium",
+    debug: {
+      deterministicMode: true,
+      seed
+    },
+    players: [
+      {
+        name: "Canal Player",
+        role: "human",
+        factionId
+      }
+    ]
+  };
+
+  const game = await services.gameSessionService.createSession(
+    createPayload,
+    defaultTestUserId
+  );
+
+  return {
+    services,
+    game: gameSchema.parse(game)
+  };
+}
+
 test("create session and load session overview", async () => {
   const { services, game: createdGame } = await createSoloGame();
 
@@ -408,6 +441,20 @@ test("submit turn persists human and bot resolutions and updates canonical state
     nextHumanState.intelligence.some((line) => /Your doctrine favors measured resolve/i.test(line)),
     true
   );
+  assert.equal(
+    submission.game.state.public.revealedEvents.includes("berlin-airlift-symbolism-surges"),
+    true
+  );
+  assert.equal(
+    submission.game.state.derived.warnings.some((warning) =>
+      /airlift is becoming a wider symbol of resolve/i.test(warning)
+    ),
+    true
+  );
+  assert.ok(
+    (submission.game.state.public.visibleTracks.globalAttention ?? 0) >
+      (createdGame.state.public.visibleTracks.globalAttention ?? 0)
+  );
   assert.ok(submission.game.lastResolution);
   assert.equal(submission.game.lastResolution?.actor.playerRole, "ai");
 
@@ -432,6 +479,240 @@ test("submit turn persists human and bot resolutions and updates canonical state
   assert.equal(reloadedGame.progression.completedRoundCount, 1);
   assert.equal(reloadedGame.lastResolution?.actor.playerRole, "ai");
   assert.ok(reloadedGame.state.public.worldTension > createdGame.state.public.worldTension);
+});
+
+test("seeded Berlin solo flow escalates through the checkpoint faceoff branch into a resolved ending", async () => {
+  const { services, game: createdGame } = await createSeededSoloGame("berlin-phase4-flow");
+  const actingPlayer = createdGame.players.find((player) => player.role === "human");
+  assert.ok(actingPlayer);
+
+  let currentGame = createdGame;
+
+  for (const optionId of ["option-usa-airlift", "option-usa-protest"]) {
+    const submission = turnResolutionResponseSchema.parse(
+      await services.turnSubmissionService.submitTurn(currentGame.id, defaultTestUserId, {
+        playerId: actingPlayer.id,
+        factionId: actingPlayer.factionId ?? "faction-usa",
+        optionId,
+        declaredIntent: "Phase 4 seeded Berlin flow.",
+        parameters: {},
+        clientContext: {
+          source: "phase4-flow-test"
+        }
+      })
+    );
+
+    currentGame = submission.game;
+  }
+
+  assert.equal(currentGame.status, "completed");
+  assert.equal(currentGame.turnNumber, 3);
+  assert.equal(currentGame.progression.completedRoundCount, 2);
+  assert.equal(currentGame.state.public.publicFlags.includes("checkpoint-faceoff-active"), true);
+  assert.equal(
+    currentGame.state.public.revealedEvents.includes("berlin-checkpoint-faceoff-intensifies"),
+    true
+  );
+  assert.equal(currentGame.state.derived.outcome.status, "ended");
+  assert.equal(currentGame.state.derived.outcome.category, "partial_success");
+  assert.equal(currentGame.state.derived.outcome.winningFactionId, "faction-ussr");
+  assert.ok(currentGame.state.derived.outcome.pressure.catastrophicRiskPercent >= 80);
+
+  const turnHistory = turnsListResponseSchema.parse({
+    turns: await services.turnSubmissionService.listTurns(currentGame.id)
+  });
+
+  assert.equal(turnHistory.turns.length, 4);
+  assert.equal(
+    turnHistory.turns.some((turn) =>
+      (turn.metadata.triggeredScenarioEventIds as string[] | undefined)?.includes(
+        "berlin-checkpoint-faceoff-intensifies"
+      )
+    ),
+    true
+  );
+});
+
+test("seeded Suez solo flow hardens the intervention window and reaches a catastrophic ending", async () => {
+  const { services, game: createdGame } = await createSeededSuezSoloGame("suez-phase4-flow");
+  const actingPlayer = createdGame.players.find((player) => player.role === "human");
+  assert.ok(actingPlayer);
+
+  let currentGame = createdGame;
+
+  for (const optionId of [
+    "option-coalition-ultimatum",
+    "option-coalition-airborne-plan",
+    "option-coalition-covert-liaison"
+  ]) {
+    const submission = turnResolutionResponseSchema.parse(
+      await services.turnSubmissionService.submitTurn(currentGame.id, defaultTestUserId, {
+        playerId: actingPlayer.id,
+        factionId: actingPlayer.factionId ?? "faction-anglo-french",
+        optionId,
+        declaredIntent: "Phase 4 seeded Suez flow.",
+        parameters: {},
+        clientContext: {
+          source: "phase4-flow-test"
+        }
+      })
+    );
+
+    currentGame = submission.game;
+  }
+
+  assert.equal(currentGame.status, "completed");
+  assert.equal(currentGame.turnNumber, 4);
+  assert.equal(currentGame.progression.completedRoundCount, 3);
+  assert.equal(
+    currentGame.state.public.publicFlags.includes("intervention-window-hardening"),
+    true
+  );
+  assert.equal(
+    currentGame.state.public.revealedEvents.includes("suez-intervention-window-hardens"),
+    true
+  );
+  assert.equal(currentGame.state.derived.outcome.status, "ended");
+  assert.equal(currentGame.state.derived.outcome.category, "catastrophic_escalation");
+  assert.ok(currentGame.state.derived.outcome.pressure.catastrophicRiskPercent >= 85);
+
+  const turnHistory = turnsListResponseSchema.parse({
+    turns: await services.turnSubmissionService.listTurns(currentGame.id)
+  });
+
+  assert.equal(turnHistory.turns.length, 6);
+  assert.equal(
+    turnHistory.turns.some((turn) =>
+      (turn.metadata.triggeredScenarioEventIds as string[] | undefined)?.includes(
+        "suez-intervention-window-hardens"
+      )
+    ),
+    true
+  );
+});
+
+test("seeded Berlin solo flow can reach a credible de-escalation ending through backchannel play", async () => {
+  const { services, game: createdGame } = await createSeededSoloGame("berlin-phase4-deescalation");
+  const actingPlayer = createdGame.players.find((player) => player.role === "human");
+  assert.ok(actingPlayer);
+
+  let currentGame = createdGame;
+
+  for (const optionId of [
+    "option-usa-backchannel",
+    "option-usa-alliance-summit",
+    "option-usa-backchannel"
+  ]) {
+    const submission = turnResolutionResponseSchema.parse(
+      await services.turnSubmissionService.submitTurn(currentGame.id, defaultTestUserId, {
+        playerId: actingPlayer.id,
+        factionId: actingPlayer.factionId ?? "faction-usa",
+        optionId,
+        declaredIntent: "Phase 4 seeded Berlin de-escalation flow.",
+        parameters: {},
+        clientContext: {
+          source: "phase4-flow-test"
+        }
+      })
+    );
+
+    currentGame = submission.game;
+
+    if (currentGame.state.derived.outcome.status === "ended") {
+      break;
+    }
+  }
+
+  assert.equal(currentGame.status, "completed");
+  assert.equal(currentGame.turnNumber, 3);
+  assert.equal(currentGame.progression.completedRoundCount, 2);
+  assert.equal(currentGame.state.derived.outcome.status, "ended");
+  assert.equal(currentGame.state.derived.outcome.category, "crisis_deescalation");
+  assert.equal(currentGame.state.derived.outcome.winningFactionId, null);
+  assert.ok(currentGame.state.public.worldTension <= 45);
+  assert.ok(currentGame.state.derived.escalationRiskPercent <= 25);
+  assert.equal(currentGame.state.public.publicFlags.includes("quiet-channel-active"), true);
+  assert.equal(currentGame.state.public.publicFlags.includes("allied-summit"), true);
+  assert.equal(
+    currentGame.state.public.revealedEvents.includes("private-overtures-reported"),
+    true
+  );
+
+  const turnHistory = turnsListResponseSchema.parse({
+    turns: await services.turnSubmissionService.listTurns(currentGame.id)
+  });
+
+  assert.equal(turnHistory.turns.length, 5);
+  assert.equal(turnHistory.turns[4]?.actingFactionId, "faction-usa");
+  assert.equal(turnHistory.turns[4]?.sessionOutcome?.category, "crisis_deescalation");
+});
+
+test("seeded Suez Egypt solo flow can converge diplomatic pressure into a strategic off-ramp win", async () => {
+  const { services, game: createdGame } = await createSeededSuezSoloGame(
+    "suez-phase4-egypt-offramp",
+    "faction-egypt"
+  );
+  const actingPlayer = createdGame.players.find((player) => player.role === "human");
+  assert.ok(actingPlayer);
+
+  let currentGame = createdGame;
+
+  for (const optionId of [
+    "option-egypt-un-appeal",
+    "option-egypt-radio-campaign",
+    "option-egypt-superpower-mediation"
+  ]) {
+    const submission = turnResolutionResponseSchema.parse(
+      await services.turnSubmissionService.submitTurn(currentGame.id, defaultTestUserId, {
+        playerId: actingPlayer.id,
+        factionId: actingPlayer.factionId ?? "faction-egypt",
+        optionId,
+        declaredIntent: "Phase 4 seeded Suez off-ramp flow.",
+        parameters: {},
+        clientContext: {
+          source: "phase4-flow-test"
+        }
+      })
+    );
+
+    currentGame = submission.game;
+
+    if (currentGame.state.derived.outcome.status === "ended") {
+      break;
+    }
+  }
+
+  assert.equal(currentGame.status, "completed");
+  assert.equal(currentGame.turnNumber, 4);
+  assert.equal(currentGame.progression.completedRoundCount, 3);
+  assert.equal(currentGame.state.derived.outcome.status, "ended");
+  assert.equal(currentGame.state.derived.outcome.category, "strategic_success");
+  assert.equal(currentGame.state.derived.outcome.winningFactionId, "faction-egypt");
+  assert.equal(currentGame.state.public.publicFlags.includes("ceasefire-channel-visible"), true);
+  assert.equal(
+    currentGame.state.public.publicFlags.includes("ceasefire-pressure-converged"),
+    true
+  );
+  assert.equal(
+    currentGame.state.public.revealedEvents.includes("suez-ceasefire-pressure-converges"),
+    true
+  );
+  assert.ok(currentGame.state.derived.outcome.pressure.deescalationOpportunityPercent >= 80);
+  assert.ok(currentGame.state.derived.escalationRiskPercent <= 50);
+
+  const turnHistory = turnsListResponseSchema.parse({
+    turns: await services.turnSubmissionService.listTurns(currentGame.id)
+  });
+
+  assert.equal(turnHistory.turns.length, 6);
+  assert.equal(
+    turnHistory.turns.some((turn) =>
+      (turn.metadata.triggeredScenarioEventIds as string[] | undefined)?.includes(
+        "suez-ceasefire-pressure-converges"
+      )
+    ),
+    true
+  );
 });
 
 test("advisor flow returns a validated visible-state answer contract", async () => {

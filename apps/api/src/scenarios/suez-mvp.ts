@@ -725,7 +725,188 @@ export function createSuezMvpScenarioDefinition() {
     ],
     metadata: {
       family: "post-imperial-crisis",
-      order: 2
+      order: 2,
+      eventRules: [
+        {
+          id: "suez-un-pressure-hardens",
+          minRound: 2,
+          minWorldTension: 56,
+          requiredPublicFlags: ["coalition-ultimatum"],
+          absentRevealedEvents: ["suez-un-pressure-hardens"],
+          effect: {
+            revealEventId: "suez-un-pressure-hardens",
+            visibleTrackDeltas: {
+              internationalPressure: 8
+            },
+            publicFlagAdds: ["un-scrutiny-intensifies"],
+            warningAdds: [
+              "International pressure is consolidating faster, making coalition tempo harder to sustain politically."
+            ]
+          }
+        },
+        {
+          id: "suez-regional-solidarity-rises",
+          minRound: 1,
+          requiredRevealedEvents: ["regional-opinion-hardens"],
+          absentRevealedEvents: ["suez-regional-solidarity-rises"],
+          effect: {
+            revealEventId: "suez-regional-solidarity-rises",
+            visibleTrackDeltas: {
+              internationalPressure: 5
+            },
+            publicFlagAdds: ["regional-solidarity-visible"],
+            warningAdds: [
+              "Regional opinion is hardening into a broader legitimacy problem for outside intervention."
+            ]
+          }
+        },
+        {
+          id: "suez-ceasefire-channel-opens",
+          minRound: 2,
+          requiredPublicFlags: ["external-mediation-sought", "un-scrutiny-intensifies"],
+          requiredRevealedEvents: ["outside-diplomatic-contact-rumored"],
+          absentRevealedEvents: ["suez-ceasefire-channel-opens"],
+          effect: {
+            revealEventId: "suez-ceasefire-channel-opens",
+            worldTensionDelta: -6,
+            escalationRiskDelta: -7,
+            visibleTrackDeltas: {
+              internationalPressure: 4,
+              militaryTempo: -4
+            },
+            publicFlagAdds: ["ceasefire-channel-visible"],
+            warningAdds: [
+              "A fragile ceasefire channel is opening under outside pressure, but it will vanish if either side tries to convert it into a unilateral advantage."
+            ]
+          }
+        },
+        {
+          id: "suez-intervention-window-hardens",
+          minRound: 2,
+          requiredPublicFlags: ["airborne-plan-readied"],
+          requiredRevealedEvents: ["coalition-forces-mobilizing"],
+          absentRevealedEvents: ["suez-intervention-window-hardens"],
+          effect: {
+            revealEventId: "suez-intervention-window-hardens",
+            worldTensionDelta: 5,
+            escalationRiskDelta: 8,
+            visibleTrackDeltas: {
+              militaryTempo: 8,
+              internationalPressure: 3
+            },
+            publicFlagAdds: ["intervention-window-hardening"],
+            warningAdds: [
+              "Coalition mobilization is hardening into a narrow intervention window in which tempo gains and diplomatic blowback are both accelerating."
+            ]
+          }
+        },
+        {
+          id: "suez-ceasefire-pressure-converges",
+          minRound: 3,
+          requiredPublicFlags: ["ceasefire-channel-visible", "un-scrutiny-intensifies"],
+          requiredRevealedEvents: ["suez-ceasefire-channel-opens"],
+          absentRevealedEvents: ["suez-ceasefire-pressure-converges"],
+          effect: {
+            revealEventId: "suez-ceasefire-pressure-converges",
+            worldTensionDelta: -8,
+            escalationRiskDelta: -12,
+            visibleTrackDeltas: {
+              internationalPressure: 3,
+              militaryTempo: -7
+            },
+            publicFlagAdds: ["ceasefire-pressure-converged"],
+            warningAdds: [
+              "Outside pressure is converging around the ceasefire channel, making further military acceleration politically harder to sustain."
+            ]
+          }
+        }
+      ],
+      outcomeModel: {
+        guidanceRoundsByLength: {
+          short: 5,
+          medium: 7,
+          long: 9
+        },
+        factionProgressModels: {
+          "faction-anglo-french": {
+            leverageWeight: 0.28,
+            momentumWeight: 0.28,
+            worldTensionWeight: 0.02,
+            escalationRiskWeight: -0.06,
+            visibleTrackWeights: {
+              canalControl: 0.24,
+              militaryTempo: 0.14,
+              internationalPressure: -0.12
+            },
+            base: 14
+          },
+          "faction-egypt": {
+            leverageWeight: 0.28,
+            momentumWeight: 0.24,
+            worldTensionWeight: 0.02,
+            escalationRiskWeight: -0.01,
+            visibleTrackWeights: {
+              internationalPressure: 0.24,
+              canalControl: -0.14,
+              militaryTempo: -0.06
+            },
+            base: 18
+          }
+        },
+        deescalationTrackWeights: {
+          internationalPressure: 0.08
+        },
+        conditionModifiers: [
+          {
+            requiredPublicFlags: ["ceasefire-channel-visible"],
+            requiredRevealedEvents: ["suez-ceasefire-channel-opens"],
+            factionProgressBonuses: {
+              "faction-egypt": 4,
+              "faction-anglo-french": -2
+            },
+            deescalationBonus: 12,
+            decisiveBonus: 3
+          },
+          {
+            requiredPublicFlags: ["ceasefire-pressure-converged"],
+            requiredRevealedEvents: ["suez-ceasefire-pressure-converges"],
+            factionProgressBonuses: {
+              "faction-egypt": 5,
+              "faction-anglo-french": -3
+            },
+            deescalationBonus: 18,
+            catastrophicBonus: -10,
+            decisiveBonus: 4
+          },
+          {
+            requiredPublicFlags: ["intervention-window-hardening"],
+            requiredRevealedEvents: ["suez-intervention-window-hardens"],
+            factionProgressBonuses: {
+              "faction-anglo-french": 5,
+              "faction-egypt": -2
+            },
+            catastrophicBonus: 12,
+            decisiveBonus: 5
+          }
+        ],
+        catastrophicTrackWeights: {
+          militaryTempo: 0.1,
+          internationalPressure: 0.02
+        },
+        deescalationBaseThreshold: 82,
+        deescalationMaturityDivisor: 8,
+        catastrophicBaseThreshold: 93,
+        catastrophicMaturityDivisor: 8,
+        strategicThresholdBase: 75,
+        strategicThresholdFloor: 66,
+        strategicThresholdMaturityDivisor: 9,
+        strategicLeadBase: 16,
+        strategicLeadFloor: 9,
+        strategicLeadMaturityDivisor: 12,
+        minResolutionMaturityPercent: 24,
+        stalemateMaturityThreshold: 80,
+        stalemateLeadThreshold: 8
+      }
     }
   });
 }

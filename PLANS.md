@@ -121,16 +121,21 @@ Unlocks
 - stronger advisor recommendations
 
 ### Phase 4: Scenario pacing, events, and outcome logic
-Status: pending
+Status: completed
 
 Goal
-- make Berlin produce stronger mid-game motion and more meaningful end states
+- make solo scenarios produce stronger mid-game motion and more meaningful end states
 
 Concrete steps
-1. Add light scenario event and pacing hooks tied to canonical triggers.
-2. Refactor outcome logic away from brittle hard-coded assumptions where necessary.
-3. Calibrate short, medium, and long game targets around the solo round model.
-4. Add tests for de-escalation, strategic success, stalemate, and catastrophic escalation under round-based pacing.
+1. Add light scenario event and pacing hooks tied to canonical triggers. Completed with a backend-owned event layer now integrated into turn resolution, including metadata-authored event rules for Berlin and Suez that can reveal events, adjust public pressure, and add warnings before outcome evaluation and next-option generation.
+   Berlin now has an initial branching event chain so the airlift path can surface a fragile off-ramp while the checkpoint path can harden into a sharper military faceoff.
+   Suez now has matching branching event pressure so mediation can open a ceasefire channel while coalition mobilization can harden into a narrow intervention window.
+   Suez now also has a follow-on ceasefire convergence branch so successful mediation can mature into a stronger off-ramp rather than stalling at a single event reveal.
+2. Refactor outcome logic away from brittle hard-coded assumptions where necessary. Completed with a metadata-driven outcome model now handling faction progress scoring, de-escalation pressure, catastrophic pressure, and leader-based resolution without relying on a fixed USA versus USSR pairing.
+   Outcome evaluation now also reads canonical public flags and revealed events, so scenario-authored event chains can directly shift de-escalation pressure, catastrophic pressure, and faction progress instead of influencing endings only through raw track deltas.
+3. Calibrate short, medium, and long game targets around the solo round model. Completed with scenario-authored guidance rounds and threshold tuning for Berlin and Suez so round-based pacing produces earlier de-escalation windows, clearer strategic wins, and late balanced stalemates.
+4. Add tests for de-escalation, strategic success, stalemate, and catastrophic escalation under round-based pacing. Completed with direct outcome-service coverage, solo integration assertions that Berlin events surface in canonical state after the first exchange, and seeded multi-round solo flow tests for Berlin and Suez that exercise both escalation and de-escalation branches through to concrete endings.
+   Current seeded integration coverage now includes a Berlin escalation line, a Berlin de-escalation line, a Suez coalition catastrophic line, and a Suez Egypt strategic off-ramp line driven by ceasefire convergence.
 
 Depends on
 - Phases 1-3

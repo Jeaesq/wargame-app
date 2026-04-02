@@ -838,7 +838,161 @@ export function createColdWarMvpScenarioDefinition() {
     ],
     metadata: {
       family: "cold-war",
-      order: 1
+      order: 1,
+      eventRules: [
+        {
+          id: "berlin-airlift-symbolism-surges",
+          minRound: 1,
+          minWorldTension: 50,
+          requiredRevealedEvents: ["airlift-sorties-expanded"],
+          absentRevealedEvents: ["berlin-airlift-symbolism-surges"],
+          effect: {
+            revealEventId: "berlin-airlift-symbolism-surges",
+            visibleTrackDeltas: {
+              globalAttention: 8,
+              diplomaticPressure: 3
+            },
+            publicFlagAdds: ["airlift-becomes-global-symbol"],
+            warningAdds: [
+              "The airlift is becoming a wider symbol of resolve, raising the political stakes of every follow-up move."
+            ]
+          }
+        },
+        {
+          id: "berlin-administrative-squeeze-hardens",
+          minRound: 2,
+          requiredPublicFlags: ["administrative-pressure-expanded"],
+          absentRevealedEvents: ["berlin-administrative-squeeze-hardens"],
+          effect: {
+            revealEventId: "berlin-administrative-squeeze-hardens",
+            worldTensionDelta: 2,
+            escalationRiskDelta: 2,
+            visibleTrackDeltas: {
+              diplomaticPressure: 5,
+              globalAttention: 4
+            },
+            publicFlagAdds: ["checkpoint-crisis-hardening"],
+            warningAdds: [
+              "Administrative pressure is hardening into a broader checkpoint crisis with less room for casual signaling."
+            ]
+          }
+        },
+        {
+          id: "berlin-airlift-offramp-emerges",
+          minRound: 2,
+          requiredPublicFlags: ["airlift-relief-window", "airlift-becomes-global-symbol"],
+          requiredRevealedEvents: ["berlin-airlift-symbolism-surges"],
+          absentRevealedEvents: ["berlin-airlift-offramp-emerges"],
+          effect: {
+            revealEventId: "berlin-airlift-offramp-emerges",
+            worldTensionDelta: -5,
+            escalationRiskDelta: -6,
+            visibleTrackDeltas: {
+              diplomaticPressure: 2,
+              militaryPosture: -3,
+              globalAttention: 2
+            },
+            publicFlagAdds: ["berlin-offramp-visible"],
+            warningAdds: [
+              "A narrow diplomatic off-ramp is becoming visible around the airlift, but it will collapse quickly if either bloc overplays the next exchange."
+            ]
+          }
+        },
+        {
+          id: "berlin-checkpoint-faceoff-intensifies",
+          minRound: 2,
+          requiredPublicFlags: ["checkpoint-probe", "checkpoint-crisis-hardening"],
+          requiredRevealedEvents: [
+            "berlin-administrative-squeeze-hardens",
+            "checkpoint-columns-mobilized"
+          ],
+          absentRevealedEvents: ["berlin-checkpoint-faceoff-intensifies"],
+          effect: {
+            revealEventId: "berlin-checkpoint-faceoff-intensifies",
+            worldTensionDelta: 4,
+            escalationRiskDelta: 7,
+            visibleTrackDeltas: {
+              militaryPosture: 7,
+              diplomaticPressure: 2,
+              globalAttention: 3
+            },
+            publicFlagAdds: ["checkpoint-faceoff-active"],
+            warningAdds: [
+              "Checkpoint probing is hardening into a direct faceoff, making symbolic missteps much more likely to trigger uncontrolled escalation."
+            ]
+          }
+        }
+      ],
+      outcomeModel: {
+        guidanceRoundsByLength: {
+          short: 4,
+          medium: 6,
+          long: 8
+        },
+        factionProgressModels: {
+          "faction-usa": {
+            leverageWeight: 0.34,
+            momentumWeight: 0.24,
+            worldTensionWeight: -0.08,
+            escalationRiskWeight: -0.07,
+            visibleTrackWeights: {
+              globalAttention: 0.18,
+              diplomaticPressure: 0.09,
+              militaryPosture: -0.08
+            },
+            base: 18
+          },
+          "faction-ussr": {
+            leverageWeight: 0.3,
+            momentumWeight: 0.26,
+            worldTensionWeight: 0.06,
+            escalationRiskWeight: -0.02,
+            visibleTrackWeights: {
+              diplomaticPressure: 0.18,
+              militaryPosture: 0.1,
+              globalAttention: 0.06
+            },
+            base: 16
+          }
+        },
+        deescalationTrackWeights: {
+          diplomaticPressure: 0.07,
+          globalAttention: 0.05
+        },
+        conditionModifiers: [
+          {
+            requiredPublicFlags: ["berlin-offramp-visible"],
+            requiredRevealedEvents: ["berlin-airlift-offramp-emerges"],
+            factionProgressBonuses: {
+              "faction-usa": 4,
+              "faction-ussr": -2
+            },
+            deescalationBonus: 12,
+            decisiveBonus: 4
+          },
+          {
+            requiredPublicFlags: ["checkpoint-faceoff-active"],
+            requiredRevealedEvents: ["berlin-checkpoint-faceoff-intensifies"],
+            factionProgressBonuses: {
+              "faction-ussr": 5,
+              "faction-usa": -3
+            },
+            catastrophicBonus: 14,
+            decisiveBonus: 6
+          }
+        ],
+        deescalationBaseThreshold: 75,
+        deescalationMaturityDivisor: 9,
+        catastrophicTrackWeights: {
+          militaryPosture: 0.1,
+          diplomaticPressure: 0.03
+        },
+        catastrophicBaseThreshold: 92,
+        catastrophicMaturityDivisor: 7,
+        minResolutionMaturityPercent: 22,
+        stalemateMaturityThreshold: 78,
+        stalemateLeadThreshold: 7
+      }
     }
   });
 }

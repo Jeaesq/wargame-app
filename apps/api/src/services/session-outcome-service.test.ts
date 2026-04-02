@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { ChoiceOption, ScenarioDefinition } from "@wargame/shared";
+import { createColdWarMvpScenarioDefinition } from "../scenarios/cold-war-mvp.js";
+import { createSuezMvpScenarioDefinition } from "../scenarios/suez-mvp.js";
 import { evaluateSessionOutcome } from "./session-outcome-service.js";
 
 const scenario: ScenarioDefinition = {
@@ -132,6 +134,34 @@ const selectedOption: ChoiceOption = {
   metadata: {}
 };
 
+const berlinScenario = createColdWarMvpScenarioDefinition();
+const suezScenario = createSuezMvpScenarioDefinition();
+
+const suezOption: ChoiceOption = {
+  id: "option-coalition-ultimatum",
+  scenarioId: suezScenario.id,
+  factionId: "faction-anglo-french",
+  kind: "diplomatic",
+  title: "Issue a joint ultimatum",
+  summary: "Frame intervention as a security necessity.",
+  visibility: "public",
+  requirementTags: [],
+  consequenceHints: [],
+  recommendationPercent: 60,
+  effectProfile: {
+    worldTensionDelta: 5,
+    escalationRiskDelta: 3,
+    visibleTrackDeltas: {},
+    negotiationLeverageDeltas: {},
+    factionMomentumDeltas: {},
+    publicFlagAdds: [],
+    publicFlagRemoves: [],
+    revealedEventAdds: [],
+    warningAdds: []
+  },
+  metadata: {}
+};
+
 test("session outcome stays ongoing early in a balanced scenario", () => {
   const outcome = evaluateSessionOutcome({
     scenario,
@@ -186,4 +216,309 @@ test("session outcome reaches catastrophic escalation when pressure becomes extr
   assert.equal(outcome.status, "ended");
   assert.equal(outcome.category, "catastrophic_escalation");
   assert.equal(outcome.winningFactionId, null);
+});
+
+test("metadata-driven Berlin outcome can end in crisis de-escalation under round pacing", () => {
+  const outcome = evaluateSessionOutcome({
+    scenario: berlinScenario,
+    targetGameLength: "medium",
+    turnNumber: 4,
+    worldTension: 38,
+    escalationRiskPercent: 34,
+    visibleTracks: {
+      diplomaticPressure: 56,
+      militaryPosture: 34,
+      globalAttention: 59
+    },
+    negotiationLeverage: {
+      "faction-usa": 68,
+      "faction-ussr": 54
+    },
+    factionMomentum: {
+      "faction-usa": 57,
+      "faction-ussr": 49
+    },
+    selectedOption
+  });
+
+  assert.equal(outcome.status, "ended");
+  assert.equal(outcome.category, "crisis_deescalation");
+});
+
+test("Berlin off-ramp event chain strengthens de-escalation pressure and USA progress", () => {
+  const baseline = evaluateSessionOutcome({
+    scenario: berlinScenario,
+    targetGameLength: "medium",
+    turnNumber: 4,
+    worldTension: 44,
+    escalationRiskPercent: 40,
+    visibleTracks: {
+      diplomaticPressure: 60,
+      militaryPosture: 36,
+      globalAttention: 68
+    },
+    negotiationLeverage: {
+      "faction-usa": 64,
+      "faction-ussr": 53
+    },
+    factionMomentum: {
+      "faction-usa": 58,
+      "faction-ussr": 48
+    },
+    selectedOption
+  });
+  const offRampVisible = evaluateSessionOutcome({
+    scenario: berlinScenario,
+    targetGameLength: "medium",
+    turnNumber: 4,
+    worldTension: 44,
+    escalationRiskPercent: 40,
+    visibleTracks: {
+      diplomaticPressure: 60,
+      militaryPosture: 36,
+      globalAttention: 68
+    },
+    publicFlags: ["berlin-offramp-visible"],
+    revealedEvents: ["berlin-airlift-offramp-emerges"],
+    negotiationLeverage: {
+      "faction-usa": 64,
+      "faction-ussr": 53
+    },
+    factionMomentum: {
+      "faction-usa": 58,
+      "faction-ussr": 48
+    },
+    selectedOption
+  });
+
+  assert.ok(
+    offRampVisible.pressure.deescalationOpportunityPercent >
+      baseline.pressure.deescalationOpportunityPercent
+  );
+  assert.ok(
+    (offRampVisible.publicObjectiveProgress["faction-usa"] ?? 0) >
+      (baseline.publicObjectiveProgress["faction-usa"] ?? 0)
+  );
+});
+
+test("Berlin checkpoint faceoff event chain raises catastrophic pressure and Soviet progress", () => {
+  const baseline = evaluateSessionOutcome({
+    scenario: berlinScenario,
+    targetGameLength: "medium",
+    turnNumber: 5,
+    worldTension: 72,
+    escalationRiskPercent: 69,
+    visibleTracks: {
+      diplomaticPressure: 70,
+      militaryPosture: 72,
+      globalAttention: 65
+    },
+    negotiationLeverage: {
+      "faction-usa": 45,
+      "faction-ussr": 67
+    },
+    factionMomentum: {
+      "faction-usa": 42,
+      "faction-ussr": 71
+    },
+    selectedOption
+  });
+  const faceoffActive = evaluateSessionOutcome({
+    scenario: berlinScenario,
+    targetGameLength: "medium",
+    turnNumber: 5,
+    worldTension: 72,
+    escalationRiskPercent: 69,
+    visibleTracks: {
+      diplomaticPressure: 70,
+      militaryPosture: 72,
+      globalAttention: 65
+    },
+    publicFlags: ["checkpoint-faceoff-active"],
+    revealedEvents: ["berlin-checkpoint-faceoff-intensifies"],
+    negotiationLeverage: {
+      "faction-usa": 45,
+      "faction-ussr": 67
+    },
+    factionMomentum: {
+      "faction-usa": 42,
+      "faction-ussr": 71
+    },
+    selectedOption
+  });
+
+  assert.ok(
+    faceoffActive.pressure.catastrophicRiskPercent > baseline.pressure.catastrophicRiskPercent
+  );
+  assert.ok(
+    (faceoffActive.publicObjectiveProgress["faction-ussr"] ?? 0) >
+      (baseline.publicObjectiveProgress["faction-ussr"] ?? 0)
+  );
+});
+
+test("metadata-driven Suez outcome can resolve as strategic success for Egypt", () => {
+  const outcome = evaluateSessionOutcome({
+    scenario: suezScenario,
+    targetGameLength: "medium",
+    turnNumber: 6,
+    worldTension: 58,
+    escalationRiskPercent: 51,
+    visibleTracks: {
+      canalControl: 38,
+      internationalPressure: 78,
+      militaryTempo: 42
+    },
+    negotiationLeverage: {
+      "faction-anglo-french": 42,
+      "faction-egypt": 74
+    },
+    factionMomentum: {
+      "faction-anglo-french": 41,
+      "faction-egypt": 76
+    },
+    selectedOption: suezOption
+  });
+
+  assert.equal(outcome.status, "ended");
+  assert.equal(outcome.category, "strategic_success");
+  assert.equal(outcome.winningFactionId, "faction-egypt");
+});
+
+test("Suez ceasefire-channel event chain strengthens de-escalation pressure and Egypt progress", () => {
+  const baseline = evaluateSessionOutcome({
+    scenario: suezScenario,
+    targetGameLength: "medium",
+    turnNumber: 5,
+    worldTension: 55,
+    escalationRiskPercent: 49,
+    visibleTracks: {
+      canalControl: 44,
+      internationalPressure: 76,
+      militaryTempo: 43
+    },
+    negotiationLeverage: {
+      "faction-anglo-french": 43,
+      "faction-egypt": 72
+    },
+    factionMomentum: {
+      "faction-anglo-french": 42,
+      "faction-egypt": 74
+    },
+    selectedOption: suezOption
+  });
+  const ceasefireVisible = evaluateSessionOutcome({
+    scenario: suezScenario,
+    targetGameLength: "medium",
+    turnNumber: 5,
+    worldTension: 55,
+    escalationRiskPercent: 49,
+    visibleTracks: {
+      canalControl: 44,
+      internationalPressure: 76,
+      militaryTempo: 43
+    },
+    publicFlags: ["ceasefire-channel-visible"],
+    revealedEvents: ["suez-ceasefire-channel-opens"],
+    negotiationLeverage: {
+      "faction-anglo-french": 43,
+      "faction-egypt": 72
+    },
+    factionMomentum: {
+      "faction-anglo-french": 42,
+      "faction-egypt": 74
+    },
+    selectedOption: suezOption
+  });
+
+  assert.ok(
+    ceasefireVisible.pressure.deescalationOpportunityPercent >
+      baseline.pressure.deescalationOpportunityPercent
+  );
+  assert.ok(
+    (ceasefireVisible.publicObjectiveProgress["faction-egypt"] ?? 0) >
+      (baseline.publicObjectiveProgress["faction-egypt"] ?? 0)
+  );
+});
+
+test("Suez intervention-window event chain raises catastrophic pressure and coalition progress", () => {
+  const baseline = evaluateSessionOutcome({
+    scenario: suezScenario,
+    targetGameLength: "medium",
+    turnNumber: 5,
+    worldTension: 71,
+    escalationRiskPercent: 66,
+    visibleTracks: {
+      canalControl: 55,
+      internationalPressure: 63,
+      militaryTempo: 74
+    },
+    negotiationLeverage: {
+      "faction-anglo-french": 61,
+      "faction-egypt": 48
+    },
+    factionMomentum: {
+      "faction-anglo-french": 69,
+      "faction-egypt": 45
+    },
+    selectedOption: suezOption
+  });
+  const interventionWindow = evaluateSessionOutcome({
+    scenario: suezScenario,
+    targetGameLength: "medium",
+    turnNumber: 5,
+    worldTension: 71,
+    escalationRiskPercent: 66,
+    visibleTracks: {
+      canalControl: 55,
+      internationalPressure: 63,
+      militaryTempo: 74
+    },
+    publicFlags: ["intervention-window-hardening"],
+    revealedEvents: ["suez-intervention-window-hardens"],
+    negotiationLeverage: {
+      "faction-anglo-french": 61,
+      "faction-egypt": 48
+    },
+    factionMomentum: {
+      "faction-anglo-french": 69,
+      "faction-egypt": 45
+    },
+    selectedOption: suezOption
+  });
+
+  assert.ok(
+    interventionWindow.pressure.catastrophicRiskPercent >
+      baseline.pressure.catastrophicRiskPercent
+  );
+  assert.ok(
+    (interventionWindow.publicObjectiveProgress["faction-anglo-french"] ?? 0) >
+      (baseline.publicObjectiveProgress["faction-anglo-french"] ?? 0)
+  );
+});
+
+test("metadata-driven Suez outcome can settle into stalemate late in a balanced crisis", () => {
+  const outcome = evaluateSessionOutcome({
+    scenario: suezScenario,
+    targetGameLength: "long",
+    turnNumber: 9,
+    worldTension: 63,
+    escalationRiskPercent: 58,
+    visibleTracks: {
+      canalControl: 53,
+      internationalPressure: 62,
+      militaryTempo: 54
+    },
+    negotiationLeverage: {
+      "faction-anglo-french": 55,
+      "faction-egypt": 56
+    },
+    factionMomentum: {
+      "faction-anglo-french": 54,
+      "faction-egypt": 55
+    },
+    selectedOption: suezOption
+  });
+
+  assert.equal(outcome.status, "ended");
+  assert.equal(outcome.category, "stalemate");
 });

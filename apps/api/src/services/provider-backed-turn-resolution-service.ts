@@ -15,6 +15,7 @@ import { buildFactionStrategicSnapshot } from "./faction-strategy-context.js";
 import { recordOptionUsageInPrivateStateMetadata } from "./legal-option-service.js";
 import { buildAvailableOptions } from "./option-presentation-service.js";
 import { evolvePrivateStatesAfterAction } from "./private-state-evolution-service.js";
+import { applyScenarioEvents } from "./scenario-event-service.js";
 import { generateSessionScopedId } from "./session-debug-service.js";
 import { evaluateSessionOutcome } from "./session-outcome-service.js";
 import type {
@@ -271,13 +272,31 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
       input.game.state.derived.factionMomentum,
       prepared.selectedOption.effectProfile.factionMomentumDeltas
     );
+    const eventState = applyScenarioEvents({
+      scenario: input.scenario,
+      selectedOption: prepared.selectedOption,
+      state: {
+        roundNumber: prepared.nextTurnNumber,
+        worldTension: prepared.nextWorldTension,
+        escalationRiskPercent: escalationRisk,
+        visibleTracks: nextVisibleTracks,
+        publicFlags: nextPublicFlags,
+        revealedEvents: nextRevealedEvents,
+        warnings: [
+          ...input.game.state.derived.warnings,
+          ...prepared.selectedOption.effectProfile.warningAdds
+        ]
+      }
+    });
     const sessionOutcome = evaluateSessionOutcome({
       scenario: input.scenario,
       targetGameLength: input.game.sessionConfig.targetGameLength,
       turnNumber: prepared.nextTurnNumber,
-      worldTension: prepared.nextWorldTension,
-      escalationRiskPercent: escalationRisk,
-      visibleTracks: nextVisibleTracks,
+      worldTension: eventState.worldTension,
+      escalationRiskPercent: eventState.escalationRiskPercent,
+      visibleTracks: eventState.visibleTracks,
+      publicFlags: eventState.publicFlags,
+      revealedEvents: eventState.revealedEvents,
       negotiationLeverage: nextNegotiationLeverage,
       factionMomentum: nextFactionMomentum,
       selectedOption: prepared.selectedOption
@@ -293,21 +312,21 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
       scenario: input.scenario,
       actingFactionId: input.action.factionId,
       selectedOption: prepared.selectedOption,
-      nextWorldTension: prepared.nextWorldTension,
-      escalationRisk
+      nextWorldTension: eventState.worldTension,
+      escalationRisk: eventState.escalationRiskPercent
     });
     const curatedNextOptions = buildAvailableOptions({
       scenario: input.scenario,
       factionId: prepared.nextFactionId,
       publicState: {
-        worldTension: prepared.nextWorldTension,
-        visibleTracks: nextVisibleTracks,
-        publicFlags: nextPublicFlags,
-        revealedEvents: nextRevealedEvents
+        worldTension: eventState.worldTension,
+        visibleTracks: eventState.visibleTracks,
+        publicFlags: eventState.publicFlags,
+        revealedEvents: eventState.revealedEvents
       },
       privateState: findPrivateStateInCollection(evolvedPrivateStates, prepared.nextFactionId),
       derivedState: {
-        escalationRiskPercent: escalationRisk,
+        escalationRiskPercent: eventState.escalationRiskPercent,
         negotiationLeverage: nextNegotiationLeverage,
         factionMomentum: nextFactionMomentum,
         outcome: sessionOutcome
@@ -376,16 +395,18 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
           key: "worldTension",
           label: "World Tension",
           previousValue: input.game.state.public.worldTension,
-          newValue: prepared.nextWorldTension,
-          delta: prepared.nextWorldTension - input.game.state.public.worldTension,
+          newValue: eventState.worldTension,
+          delta: eventState.worldTension - input.game.state.public.worldTension,
           visibility: "public"
         },
         {
           key: "escalationRiskPercent",
           label: "Escalation Risk",
           previousValue: input.game.state.derived.escalationRiskPercent,
-          newValue: escalationRisk,
-          delta: escalationRisk - input.game.state.derived.escalationRiskPercent,
+          newValue: eventState.escalationRiskPercent,
+          delta:
+            eventState.escalationRiskPercent -
+            input.game.state.derived.escalationRiskPercent,
           visibility: "derived"
         },
         ...Object.entries(prepared.selectedOption.effectProfile.visibleTrackDeltas).map(
@@ -420,8 +441,8 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
         )
       ],
       updatedTracks: {
-        ...nextVisibleTracks,
-        worldTension: prepared.nextWorldTension
+        ...eventState.visibleTracks,
+        worldTension: eventState.worldTension
       },
       escalated: prepared.tensionDelta >= 10,
       sessionOutcome,
@@ -443,6 +464,7 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
         ...artifacts.metadata,
         turnProviderRecommendedNextOptionIds: validatedRecommendedNextOptionIds,
         worldUpdateSuggestions,
+        triggeredScenarioEventIds: eventState.triggeredEventIds,
         integrationReady: "provider-turn-generation"
       }
     });
@@ -463,10 +485,12 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
       sessionConfig: generatedResolutionId.sessionConfig,
       recommendedNextOptionIds: validatedRecommendedNextOptionIds,
       recommendedOptionNotes: validatedRecommendedOptionNotes,
-      escalationRisk,
-      nextVisibleTracks,
-      nextPublicFlags,
-      nextRevealedEvents,
+      nextWorldTension: eventState.worldTension,
+      escalationRisk: eventState.escalationRiskPercent,
+      nextVisibleTracks: eventState.visibleTracks,
+      nextPublicFlags: eventState.publicFlags,
+      nextRevealedEvents: eventState.revealedEvents,
+      nextWarnings: eventState.warnings,
       evolvedPrivateStates,
       nextActingPrivateMetadata,
       nextNegotiationLeverage,
@@ -571,10 +595,12 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
     sessionConfig: Game["sessionConfig"];
     recommendedNextOptionIds: string[];
     recommendedOptionNotes: Array<{ optionId: string; rationale: string }>;
+    nextWorldTension: number;
     escalationRisk: number;
     nextVisibleTracks: Record<string, number>;
     nextPublicFlags: string[];
     nextRevealedEvents: string[];
+    nextWarnings: string[];
     evolvedPrivateStates: Game["state"]["privateByPlayer"];
     nextActingPrivateMetadata: Record<string, unknown>;
     nextNegotiationLeverage: Record<string, number>;
@@ -591,7 +617,7 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
             scenario,
             factionId: nextFactionId,
             publicState: {
-              worldTension: prepared.nextWorldTension,
+              worldTension: input.nextWorldTension,
               visibleTracks: input.nextVisibleTracks,
               publicFlags: input.nextPublicFlags,
               revealedEvents: input.nextRevealedEvents
@@ -613,8 +639,7 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
           })
         : [];
     const nextWarnings = [
-      ...game.state.derived.warnings,
-      ...prepared.selectedOption.effectProfile.warningAdds,
+      ...input.nextWarnings,
       ...(resolution.escalated ? ["Recent action increased escalation pressure."] : [])
     ];
     const uniqueWarnings = [...new Set(nextWarnings)];
@@ -631,7 +656,7 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
           turnNumber: prepared.nextTurnNumber,
           phase: isCompleted ? "turn_complete" : "briefing",
           activeFactionId: nextFactionId,
-          worldTension: prepared.nextWorldTension,
+          worldTension: input.nextWorldTension,
           publicNarrative: resolution.llmNarrative.publicSummary,
           headline: resolution.llmNarrative.headline,
           visibleTracks: input.nextVisibleTracks,
@@ -653,7 +678,7 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
             selectedOption: prepared.selectedOption,
             actionFactionId: input.actionFactionId,
             nextFactionId: prepared.nextFactionId,
-            nextWorldTension: prepared.nextWorldTension,
+            nextWorldTension: input.nextWorldTension,
             escalationRisk: input.escalationRisk,
             outcome: input.sessionOutcome,
             isCompleted
@@ -665,7 +690,7 @@ export class ProviderBackedTurnResolutionService implements TurnResolutionServic
             selectedOption: prepared.selectedOption,
             actionFactionId: input.actionFactionId,
             nextFactionId: prepared.nextFactionId,
-            nextWorldTension: prepared.nextWorldTension,
+            nextWorldTension: input.nextWorldTension,
             escalationRisk: input.escalationRisk,
             outcome: input.sessionOutcome,
             nextVisibleTracks: input.nextVisibleTracks,
