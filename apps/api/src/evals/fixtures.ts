@@ -337,7 +337,7 @@ function createContext(input: {
           "faction-ussr": 50
         },
         metadata: {}
-    },
+      },
     visibleOptions: input.visibleOptions,
     visibleWarnings: input.visibleWarnings,
     privateBriefing: `Visible private briefing for ${input.factionId}.`,
@@ -395,6 +395,39 @@ function createContext(input: {
       strategicPosture: "contest",
       visiblePriority:
         "The likely opponent still has visible room to contest the crisis, so recommendations should account for an active adversary."
+    },
+    advisorFraming: {
+      roundLabel: `Turn ${input.turnNumber}`,
+      pacingWindow:
+        (input.visibleOutcome?.pressure.maturityPercent ?? 25) >= 70
+          ? "endgame"
+          : (input.visibleOutcome?.pressure.maturityPercent ?? 25) >= 35
+            ? "midgame"
+            : "opening",
+      pacingSummary:
+        "Visible pacing remains active, so recommendations should weigh leverage against preserving later flexibility.",
+      pressureSummary:
+        "Visible pressure is contested, so the next move must balance leverage, escalation, and off-ramp preservation.",
+      opponentSummary:
+        "The likely opponent still has visible room to contest the crisis, so recommendations should account for an active adversary.",
+      optionComparisons: input.visibleOptions.map((option) => ({
+        optionId: option.id,
+        title: option.title,
+        doctrineFit:
+          option.kind === "military_signal"
+            ? "risky"
+            : option.kind === "diplomatic" || option.kind === "intelligence"
+              ? "strong"
+              : "situational",
+        pressureRole:
+          option.kind === "military_signal"
+            ? "accelerate"
+            : option.kind === "intelligence"
+              ? "probe"
+              : "hold_line",
+        rationale: `${option.title} is visible, legal, and relevant to the current public state.`,
+        riskSummary: "Visible downside depends on how the opposing side reads the signal."
+      }))
     },
     lastAdvisorAnswer: null
   };

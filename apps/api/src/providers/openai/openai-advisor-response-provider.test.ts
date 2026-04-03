@@ -186,6 +186,28 @@ const context: AdvisorVisibleContext = {
     visiblePriority:
       "Berlin still rewards coercive leverage, so sustained pressure should outpace Western reassurance without making the crisis obviously uncontrollable."
   },
+  advisorFraming: {
+    roundLabel: "Round 1",
+    pacingWindow: "opening",
+    pacingSummary:
+      "Round 1 is in the opening phase, with room to improve leverage if the next move stays disciplined.",
+    pressureSummary:
+      "Visible pressure is contested: decisive pressure is 20% and de-escalation opportunity is 40%.",
+    opponentSummary:
+      "Likely opponent posture points toward coercive leverage below the threshold of war, with priority on berlin still rewards coercive leverage, so sustained pressure should outpace western reassurance without making the crisis obviously uncontrollable.",
+    optionComparisons: [
+      {
+        optionId: "option-1",
+        title: "Expand the airlift",
+        doctrineFit: "strong",
+        pressureRole: "hold_line",
+        rationale:
+          "Expand the airlift fits the current doctrine well because it fits current doctrine, and it sustains pressure without forcing an immediate rupture.",
+        riskSummary:
+          "Visible downside: this choice may preserve flexibility but give up short-term initiative."
+      }
+    ]
+  },
   lastAdvisorAnswer: null
 };
 

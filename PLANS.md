@@ -145,16 +145,17 @@ Unlocks
 - balancing work
 
 ### Phase 5: Advisor usefulness pass
-Status: pending
+Status: completed
 
 Goal
 - make advisor guidance reflect the real solo situation rather than a thinner early-state approximation
 
 Concrete steps
-1. Rebuild advisor context around stronger legal-option and private-state pipelines.
-2. Improve recommendation rationale, risk framing, and option comparisons around current round pacing.
-3. Keep outputs schema-validated and visibility-safe.
-4. Add tests for usefulness and visibility against richer solo contexts.
+1. Rebuild advisor context around stronger legal-option and private-state pipelines. Completed with a backend-authored advisor-framing layer that summarizes round pacing, visible pressure, opponent posture, and option-by-option tradeoffs from canonical visible state before provider generation.
+2. Improve recommendation rationale, risk framing, and option comparisons around current round pacing. Completed with the mock and OpenAI advisor paths now consuming the same backend framing so recommendations stay aligned with solo round pacing, outcome pressure, and visible option tradeoffs.
+   The current slice also makes next-move answers compare a leading option against a visible alternative instead of only naming one top move.
+3. Keep outputs schema-validated and visibility-safe. Completed with provider-backed sanitization still enforcing visible option ids only, now capped to a concise recommendation list server-side.
+4. Add tests for usefulness and visibility against richer solo contexts. Completed with advisor framing unit tests, comparative mock-advisor tests, updated OpenAI prompt tests, provider-backed advisor service coverage, and refreshed deterministic eval fixtures.
 
 Depends on
 - Phases 2-4

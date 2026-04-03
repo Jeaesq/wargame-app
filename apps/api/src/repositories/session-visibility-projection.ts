@@ -5,6 +5,7 @@ import {
   type Game,
   type TurnResolution
 } from "@wargame/shared";
+import { buildVisibleAdvisorFraming } from "../services/advisor-framing-service.js";
 import { buildVisibleStrategicAssessment } from "../services/faction-strategy-context.js";
 import type { AdvisorVisibleContext, SessionViewSelection } from "./contracts.js";
 
@@ -315,6 +316,18 @@ export function buildAdvisorVisibleContext(
   const lastAdvisorAnswer = projected.advisorAnswers.at(-1) ?? null;
   const focalFactionId = selection.factionId ?? scope.factionIds[0] ?? null;
   const likelyOpponentFactionId = getLikelyOpponentFactionId(projected, focalFactionId);
+  const strategicAssessment = focalFactionId
+    ? buildVisibleStrategicAssessment({
+        game: projected,
+        factionId: focalFactionId
+      })
+    : null;
+  const likelyOpponentAssessment = likelyOpponentFactionId
+    ? buildVisibleStrategicAssessment({
+        game: projected,
+        factionId: likelyOpponentFactionId
+      })
+    : null;
 
   return {
     gameId: projected.id,
@@ -328,18 +341,15 @@ export function buildAdvisorVisibleContext(
     visibleWarnings: projected.state.derived.warnings,
     privateBriefing: focalPrivateState?.privateBriefing ?? null,
     visibleIntelligence: focalPrivateState?.intelligence ?? [],
-    strategicAssessment: focalFactionId
-      ? buildVisibleStrategicAssessment({
-          game: projected,
-          factionId: focalFactionId
-        })
-      : null,
-    likelyOpponentAssessment: likelyOpponentFactionId
-      ? buildVisibleStrategicAssessment({
-          game: projected,
-          factionId: likelyOpponentFactionId
-        })
-      : null,
+    strategicAssessment,
+    likelyOpponentAssessment,
+    advisorFraming: buildVisibleAdvisorFraming({
+      game: projected,
+      factionId: focalFactionId,
+      strategicAssessment,
+      likelyOpponentAssessment,
+      visibleOptions
+    }),
     lastAdvisorAnswer
   };
 }

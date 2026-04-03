@@ -12,9 +12,9 @@ function sanitizeRecommendedOptionIds(input: {
 }) {
   const allowedIds = new Set(input.visibleOptionIds);
 
-  return [...new Set(input.recommendedOptionIds)].filter((optionId) =>
-    allowedIds.has(optionId)
-  );
+  return [...new Set(input.recommendedOptionIds)]
+    .filter((optionId) => allowedIds.has(optionId))
+    .slice(0, 2);
 }
 
 export class ProviderBackedAdvisorService implements AdvisorService {

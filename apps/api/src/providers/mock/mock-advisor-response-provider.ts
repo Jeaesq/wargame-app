@@ -1,10 +1,15 @@
 import { advisorResponsePayloadSchema } from "@wargame/shared";
 import { logInfo } from "../../logger.js";
+import { scoreAdvisorComparison } from "../../services/advisor-framing-service.js";
 import { getStrategicCategory } from "../../services/faction-strategy-context.js";
 import type {
   AdvisorResponseProvider,
   AdvisorResponseProviderInput
 } from "../types.js";
+
+type RankedVisibleOption = AdvisorResponseProviderInput["context"]["visibleOptions"][number] & {
+  advisorScore: number;
+};
 
 function getStrategicBonus(input: {
   option: AdvisorResponseProviderInput["context"]["visibleOptions"][number];
@@ -49,23 +54,43 @@ export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
     });
 
     const normalizedQuestion = input.question.trim().toLowerCase();
-    const rankedOptions = [...input.context.visibleOptions].sort((left, right) => {
-      const leftScore =
-        (left.recommendationPercent ?? 0) +
-        getStrategicBonus({
-          option: left,
-          assessment: input.context.strategicAssessment
-        });
-      const rightScore =
-        (right.recommendationPercent ?? 0) +
-        getStrategicBonus({
-          option: right,
-          assessment: input.context.strategicAssessment
-        });
+    const comparisonByOptionId = new Map(
+      (input.context.advisorFraming?.optionComparisons ?? []).map((comparison) => [
+        comparison.optionId,
+        comparison
+      ])
+    );
+    const rankedOptions: RankedVisibleOption[] = [...input.context.visibleOptions]
+      .map((option) => {
+        const advisorScore =
+          scoreAdvisorComparison({
+            comparison: comparisonByOptionId.get(option.id) ?? {
+              optionId: option.id,
+              title: option.title,
+              doctrineFit: "situational",
+              pressureRole: "hold_line",
+              rationale: option.summary,
+              riskSummary: "Visible downside remains contested."
+            },
+            visibleOutcome: input.context.visibleOutcome,
+            recommendationPercent: option.recommendationPercent
+          }) +
+          getStrategicBonus({
+            option,
+            assessment: input.context.strategicAssessment
+          });
 
-      return rightScore - leftScore;
-    });
+        return {
+          ...option,
+          advisorScore
+        };
+      })
+      .sort((left, right) => right.advisorScore - left.advisorScore);
     const topOption = rankedOptions[0];
+    const secondOption = rankedOptions[1] ?? null;
+    const topComparison = topOption ? comparisonByOptionId.get(topOption.id) ?? null : null;
+    const secondComparison =
+      secondOption ? comparisonByOptionId.get(secondOption.id) ?? null : null;
     const publicState = input.context.publicState;
     const asksAboutRisk =
       normalizedQuestion.includes("risk") ||
@@ -94,12 +119,32 @@ export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
     const privateLine = input.context.privateBriefing
       ? `Current private briefing: ${input.context.privateBriefing}`
       : "No additional private briefing is available in this view.";
+    const pacingLine =
+      input.context.advisorFraming?.pacingSummary ??
+      "Visible pacing does not yet force a clear narrow window.";
+    const pressureLine =
+      input.context.advisorFraming?.pressureSummary ??
+      "Visible pressure remains contested.";
+    const optionTradeoffLine = topComparison
+      ? `${topComparison.rationale} ${topComparison.riskSummary}`
+      : "No additional visible option comparison is available in this view.";
+    const comparisonLine =
+      topOption && secondOption
+        ? `${topOption.title} is currently stronger than ${secondOption.title.toLowerCase()} because ${topComparison?.pressureRole === "deescalate" ? "it better preserves the visible off-ramp" : topComparison?.doctrineFit === "strong" ? "it fits the visible doctrine more cleanly" : "its visible tradeoffs are easier to control this round"}. ${secondComparison?.riskSummary ?? ""}`.trim()
+        : null;
+    const recommendedOptionIds =
+      asksAboutOptions && topOption
+        ? [topOption.id, secondOption?.id].filter((value): value is string => Boolean(value))
+        : asksWhatMatters && topOption
+          ? [topOption.id]
+          : [];
 
     let shortAnswer = "The visible situation remains manageable but tense.";
     let rationale = [
       `Public world tension is currently ${publicState.worldTension}%.`,
       `There are ${input.context.visibleOptions.length} visible option(s) available from this perspective.`,
-      doctrineLine
+      doctrineLine,
+      pacingLine
     ];
     let confidenceLabel: "low" | "medium" | "high" | "uncertain" = "medium";
     let summary =
@@ -119,6 +164,7 @@ export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
       summary = shortAnswer;
       rationale = [
         `World tension is ${publicState.worldTension}% based on public state.`,
+        pressureLine,
         doctrineLine,
         opponentLine,
         "Recent public conditions indicate the next move will be interpreted as a signal of intent.",
@@ -139,21 +185,28 @@ export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
             : "What matters most now is changing leverage without losing control of escalation.";
       summary = shortAnswer;
       rationale = [
-        `Visible scenario maturity is ${visibleOutcome.pressure.maturityPercent}%.`,
-        `Visible catastrophic risk is ${visibleOutcome.pressure.catastrophicRiskPercent}% and de-escalation opportunity is ${visibleOutcome.pressure.deescalationOpportunityPercent}%.`,
+        pacingLine,
+        pressureLine,
         strategicAssessment?.visiblePriority ?? doctrineLine,
         opponentLine,
+        ...(comparisonLine ? [comparisonLine] : []),
         "The visible question is less about hidden intent and more about whether the next move creates leverage or opens an off-ramp."
       ];
       confidenceLabel = "medium";
     } else if (asksAboutOptions && topOption) {
-      shortAnswer = `The strongest visible option is ${topOption.title.toLowerCase()}.`;
-      summary = `Based on visible state, ${topOption.title.toLowerCase()} is the clearest recommendation.`;
+      shortAnswer = secondOption
+        ? `The strongest visible option is ${topOption.title.toLowerCase()}, ahead of ${secondOption.title.toLowerCase()}.`
+        : `The strongest visible option is ${topOption.title.toLowerCase()}.`;
+      summary = secondOption
+        ? `Based on visible state, ${topOption.title.toLowerCase()} is the clearest recommendation, with ${secondOption.title.toLowerCase()} as the main alternative.`
+        : `Based on visible state, ${topOption.title.toLowerCase()} is the clearest recommendation.`;
       rationale = [
-        `${topOption.title} carries the highest visible advisory score at ${topOption.recommendationPercent ?? 0}%.`,
+        `${topOption.title} carries the highest visible advisory score at ${topOption.advisorScore}%.`,
+        optionTradeoffLine,
+        ...(comparisonLine ? [comparisonLine] : []),
+        pressureLine,
         strategicAssessment?.visiblePriority ?? doctrineLine,
         opponentLine,
-        `Public tension is ${publicState.worldTension}%, so visible signaling still matters.`,
         "This answer is limited to currently visible options and public state."
       ];
       confidenceLabel =
@@ -164,9 +217,10 @@ export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
         "The crisis remains unresolved, and the visible state suggests that pressure and signaling are the main drivers right now.";
       rationale = [
         publicState.publicNarrative,
+        pacingLine,
+        pressureLine,
         privateLine,
         opponentLine,
-        `World tension is ${publicState.worldTension}% in the public state.`,
         "This answer is grounded only in public information and visible options."
       ];
       confidenceLabel = "medium";
@@ -175,9 +229,11 @@ export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
       summary = shortAnswer;
       rationale = [
         `${topOption.title} is currently the highest-ranked visible option.`,
+        optionTradeoffLine,
+        ...(comparisonLine ? [comparisonLine] : []),
+        pressureLine,
         strategicAssessment?.visiblePriority ?? doctrineLine,
         opponentLine,
-        `Visible tension is ${publicState.worldTension}%.`,
         "No hidden state was used to produce this answer."
       ];
     }
@@ -192,17 +248,35 @@ export class MockAdvisorResponseProvider implements AdvisorResponseProvider {
               "No visible option or public-state signal was strong enough to support a clearer answer."
             ],
       recommendationBand:
-        topOption && asksAboutOptions ? "medium" : asksAboutRisk ? "uncertain" : "medium",
+        topOption && asksAboutOptions && (topOption.advisorScore >= 72 || !secondOption)
+          ? "high"
+          : asksAboutRisk
+            ? "uncertain"
+            : topOption
+              ? "medium"
+              : "low",
       confidenceLabel,
-      recommendedOptionIds: topOption ? [topOption.id] : [],
-      confidencePercent: topOption?.recommendationPercent ?? 25,
+      recommendedOptionIds,
+      confidencePercent: Math.max(
+        25,
+        Math.min(
+          90,
+          topOption?.advisorScore ??
+            topOption?.recommendationPercent ??
+            25
+        )
+      ),
       riskNotes: [
         "Recommendation percentages are advisory and not deterministic.",
-        "This mock advisor answers from player-visible public and faction-visible private state only."
+        "This mock advisor answers from player-visible public and faction-visible private state only.",
+        ...(secondComparison ? [secondComparison.riskSummary] : []),
+        ...(topComparison ? [topComparison.riskSummary] : [])
       ],
       assumptions: [
         `Scenario context: ${input.scenario.title}`,
         pacingAssumption,
+        pacingLine,
+        pressureLine,
         doctrineLine,
         opponentLine,
         "No hidden intelligence or external LLM call has been used in this placeholder implementation."

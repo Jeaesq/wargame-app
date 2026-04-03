@@ -253,6 +253,7 @@ export function buildOpenAIAdvisorPrompt(
         visibleIntelligence: input.context.visibleIntelligence,
         strategicAssessment: input.context.strategicAssessment,
         likelyOpponentAssessment: input.context.likelyOpponentAssessment,
+        advisorFraming: input.context.advisorFraming,
         visibleOptions,
         visibleOptionIds: visibleOptions.map((option) => option.id),
         visibleWarnings: input.context.visibleWarnings,
@@ -273,11 +274,11 @@ export function buildOpenAIAdvisorPrompt(
         shortAnswer:
           "1 direct sentence answering the question in plain language.",
         rationale:
-          "2-4 concise points. Prefer direct visible facts first, then cautious interpretation if needed.",
+          "2-4 concise points. Prefer direct visible facts first, then cautious interpretation if needed. When multiple visible options are plausible, compare the leading option against at least one visible alternative.",
         recommendationBand:
           "Use high, medium, low, or uncertain based on visible evidence quality and usefulness.",
         recommendedOptionIds:
-          "Only option ids from visibleOptionIds. Use an empty array if no visible option deserves recommendation.",
+          "Only option ids from visibleOptionIds. Use an empty array if no visible option deserves recommendation. Prefer one to two ids rather than a long list.",
         riskNotes:
           "Name concrete visible downsides, tradeoffs, or uncertainties.",
         assumptions:
@@ -289,11 +290,13 @@ export function buildOpenAIAdvisorPrompt(
         "Use only the supplied visibleState and question.",
         "Faction-visible private briefing and intelligence in visibleState are allowed evidence because they are already scoped to the requesting player.",
         "likelyOpponentAssessment is a backend-supplied visible inference based on public state and scenario framing. You may use it, but do not invent extra hidden motives beyond it.",
+        "advisorFraming is backend-authored visible guidance about pacing, pressure, and option tradeoffs. Use it to stay grounded in the current solo state rather than inventing your own pacing model.",
         "Distinguish known facts from inference. Put known visible facts in rationale; put cautious inference or uncertainty in assumptions.",
         "Do not mention hidden information, secret intentions, or unseen future options.",
         "Treat targetGameLength as pacing guidance, not as a strict turn cap or guaranteed ending.",
         "Recommendation percentages are advisory, not certain.",
         "Keep recommendations actionable and tied to visible options or visible constraints.",
+        "If the player is choosing between moves, explain why the leading visible option beats at least one visible alternative when the context supports that comparison.",
         "Use recommendedOptionIds only for option ids that appear in visibleOptionIds.",
         "If visibility is insufficient, say so plainly, reduce confidence, and avoid overclaiming.",
         ...buildNarrativeQualityRules({

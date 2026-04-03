@@ -5,6 +5,7 @@ import type {
   ScenarioDefinition,
   TurnResolution
 } from "@wargame/shared";
+import type { VisibleAdvisorFraming } from "../services/advisor-framing-service.js";
 import type { VisibleStrategicAssessment } from "../services/faction-strategy-context.js";
 
 export type SessionViewSelection = {
@@ -51,6 +52,7 @@ export type AdvisorVisibleContext = {
   visibleIntelligence: string[];
   strategicAssessment: VisibleStrategicAssessment | null;
   likelyOpponentAssessment: VisibleStrategicAssessment | null;
+  advisorFraming: VisibleAdvisorFraming | null;
   lastAdvisorAnswer: AdvisorAnswer | null;
 };
 

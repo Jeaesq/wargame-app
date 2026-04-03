@@ -191,6 +191,28 @@ const context: AdvisorVisibleContext = {
     visiblePriority:
       "Berlin still rewards coercive leverage, so sustained pressure should outpace Western reassurance without making the crisis obviously uncontrollable."
   },
+  advisorFraming: {
+    roundLabel: "Round 1",
+    pacingWindow: "opening",
+    pacingSummary:
+      "Round 1 is in the opening phase, with room to improve leverage if the next move stays disciplined.",
+    pressureSummary:
+      "Visible pressure is contested: decisive pressure is 20% and de-escalation opportunity is 40%.",
+    opponentSummary:
+      "Likely opponent posture points toward coercive leverage below the threshold of war, with priority on berlin still rewards coercive leverage, so sustained pressure should outpace western reassurance without making the crisis obviously uncontrollable.",
+    optionComparisons: [
+      {
+        optionId: "option-1",
+        title: "Expand the airlift",
+        doctrineFit: "strong",
+        pressureRole: "hold_line",
+        rationale:
+          "Expand the airlift fits the current doctrine well because it fits current doctrine, and it sustains pressure without forcing an immediate rupture.",
+        riskSummary:
+          "Visible downside: this choice may preserve flexibility but give up short-term initiative."
+      }
+    ]
+  },
   lastAdvisorAnswer: null
 };
 
@@ -319,8 +341,17 @@ test("advisor prompt includes explicit visibility and evidence boundaries", () =
       visibleIntelligence: string[];
       strategicAssessment: { doctrineLabel: string };
       likelyOpponentAssessment: { doctrineLabel: string };
+      advisorFraming: {
+        roundLabel: string | null;
+        pacingWindow: string;
+        optionComparisons: Array<{ optionId: string; doctrineFit: string }>;
+      };
     };
-    answerRequirements: { assumptions: string };
+    answerRequirements: {
+      assumptions: string;
+      rationale: string;
+      recommendedOptionIds: string;
+    };
     rules: string[];
   };
 
@@ -336,12 +367,22 @@ test("advisor prompt includes explicit visibility and evidence boundaries", () =
     parsed.visibleState.likelyOpponentAssessment.doctrineLabel,
     "coercive leverage below the threshold of war"
   );
+  assert.equal(parsed.visibleState.advisorFraming.roundLabel, "Round 1");
+  assert.equal(parsed.visibleState.advisorFraming.pacingWindow, "opening");
+  assert.equal(parsed.visibleState.advisorFraming.optionComparisons[0]?.optionId, "option-1");
+  assert.equal(parsed.visibleState.advisorFraming.optionComparisons[0]?.doctrineFit, "strong");
   assert.match(parsed.answerRequirements.assumptions, /Use this only for cautious inference/i);
+  assert.match(parsed.answerRequirements.rationale, /compare the leading option/i);
+  assert.match(parsed.answerRequirements.recommendedOptionIds, /Prefer one to two ids/i);
   assert.ok(
     parsed.rules.some((rule) => /Distinguish known facts from inference/i.test(rule))
   );
   assert.ok(
     parsed.rules.some((rule) => /Faction-visible private briefing and intelligence/i.test(rule))
+  );
+  assert.ok(parsed.rules.some((rule) => /advisorFraming is backend-authored/i.test(rule)));
+  assert.ok(
+    parsed.rules.some((rule) => /leading visible option beats at least one visible alternative/i.test(rule))
   );
   assert.ok(
     parsed.rules.some((rule) => /Keep recommendations actionable/i.test(rule))
