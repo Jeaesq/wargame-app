@@ -8,6 +8,7 @@ import { PublicStatePanel } from "../../../components/public-state-panel";
 import { ScenarioBriefing } from "../../../components/scenario-briefing";
 import { SessionOverviewSummary } from "../../../components/session-overview-summary";
 import { SessionAccessPanel } from "../../../components/session-access-panel";
+import { SoloRoundPanel } from "../../../components/solo-round-panel";
 import { TurnHistory } from "../../../components/turn-history";
 import { getGame, getScenarios, getTurnHistory } from "../../../lib/api";
 import {
@@ -99,6 +100,11 @@ export default async function GameDetailPage({
                 </div>
               </section>
               {scenario ? <ScenarioBriefing game={game} scenario={scenario} /> : null}
+              <SoloRoundPanel
+                game={game}
+                context="overview"
+                factionLabels={factionLabels}
+              />
               <SessionOverviewSummary
                 game={game}
                 privateState={privateState}
@@ -125,6 +131,7 @@ export default async function GameDetailPage({
               factionId={currentHumanPlayer?.factionId ?? null}
               gameId={game.id}
               playerId={currentHumanPlayer?.id}
+              visibleOptions={privateState?.availableOptions ?? []}
             />
           </div>
         </div>

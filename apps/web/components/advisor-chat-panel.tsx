@@ -1,4 +1,4 @@
-import type { AdvisorAnswer } from "@wargame/shared";
+import type { AdvisorAnswer, ChoiceOption } from "@wargame/shared";
 import { AdvisorQuestionForm } from "./advisor-question-form";
 
 type AdvisorChatPanelProps = {
@@ -6,20 +6,29 @@ type AdvisorChatPanelProps = {
   gameId: string;
   playerId?: string;
   factionId?: string | null;
+  visibleOptions?: ChoiceOption[];
 };
 
 export function AdvisorChatPanel({
   answer,
   gameId,
   playerId,
-  factionId
+  factionId,
+  visibleOptions = []
 }: AdvisorChatPanelProps) {
+  const hasRecommendations = (answer?.recommendedOptionIds.length ?? 0) > 0;
+  const optionById = new Map(visibleOptions.map((option) => [option.id, option]));
+
   return (
     <section className="panel">
       <div className="panel__header">
-        <h2>Advisor Chat</h2>
-        <span className="pill">Mock Q&A</span>
+        <h2>Advisor Readout</h2>
+        <span className="pill">Visible-state guidance</span>
       </div>
+      <p className="muted">
+        Ask for a visible-state assessment of this round. The advisor can compare current legal
+        options, but it does not reveal hidden information or backend-only outcomes.
+      </p>
       <AdvisorQuestionForm
         factionId={factionId}
         gameId={gameId}
@@ -39,6 +48,30 @@ export function AdvisorChatPanel({
             <strong>Advisor Summary</strong>
             <p>{answer.summary}</p>
           </div>
+          {hasRecommendations ? (
+            <div className="chat-item">
+              <strong>Recommended visible options</strong>
+              <div className="section-stack">
+                {answer.recommendedOptionIds.map((optionId) => {
+                  const option = optionById.get(optionId);
+
+                  return (
+                    <div className="option-card" key={optionId}>
+                      <div className="panel__header">
+                        <strong>{option?.title ?? optionId}</strong>
+                        <span className="pill">
+                          {typeof option?.metadata.presentationCategory === "string"
+                            ? option.metadata.presentationCategory
+                            : option?.kind?.replaceAll("_", " ") ?? "visible option"}
+                        </span>
+                      </div>
+                      <p className="muted">{option?.summary ?? "Visible recommendation from the advisor."}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
           <div className="chat-item">
             <strong>Rationale</strong>
             <ul className="list">
@@ -54,6 +87,7 @@ export function AdvisorChatPanel({
             <div className="inline-meta">
               <span className="pill">{answer.confidenceLabel}</span>
               <span className="pill">{answer.confidencePercent}%</span>
+              <span className="pill">Band: {answer.recommendationBand}</span>
             </div>
           </div>
           <div className="chat-item">
@@ -66,9 +100,21 @@ export function AdvisorChatPanel({
               ))}
             </ul>
           </div>
+          {answer.assumptions.length ? (
+            <div className="chat-item">
+              <strong>Stated assumptions</strong>
+              <ul className="list">
+                {answer.assumptions.map((item) => (
+                  <li className="list-item" key={item}>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
       ) : (
-        <p className="muted">Ask a question to get a mock advisory read based on visible state.</p>
+        <p className="muted">Ask a question to get a visible-state advisory read for the current round.</p>
       )}
     </section>
   );

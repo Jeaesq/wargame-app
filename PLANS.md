@@ -164,15 +164,15 @@ Unlocks
 - reliable player guidance
 
 ### Phase 6: Solo UX clarity and session readability
-Status: pending
+Status: in progress
 
 Goal
 - present solo rounds, AI follow-up, and outcome pressure clearly to players
 
 Concrete steps
-1. Update the web UI to show round-level progression and AI follow-up more clearly.
-2. Make history and current-state panels distinguish player and AI changes within a solo round.
-3. Surface objectives, pacing, and outcome pressure without exposing hidden state.
+1. Update the web UI to show round-level progression and AI follow-up more clearly. In progress with a dedicated solo round-status panel being added to the overview and turn workspace.
+2. Make history and current-state panels distinguish player and AI changes within a solo round. In progress with turn history moving toward grouped round presentation instead of a flat action list.
+3. Surface objectives, pacing, and outcome pressure without exposing hidden state. In progress with public and derived state panels being refocused around player-readable pressure, timing, and visible developments.
 4. Validate the experience with small manual playtests before wider balancing.
 
 Depends on

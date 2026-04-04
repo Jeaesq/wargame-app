@@ -9,6 +9,28 @@ function formatLabel(label: string, factionLabels?: Record<string, string>) {
   return factionLabels?.[label] ?? label;
 }
 
+function buildPressureSummary(derivedState: DerivedGameState) {
+  const pressure = derivedState.outcome.pressure;
+
+  if (derivedState.outcome.status === "ended") {
+    return derivedState.outcome.summary ?? "This session has already resolved.";
+  }
+
+  if (pressure.catastrophicRiskPercent >= 75) {
+    return "The visible state is close to a dangerous break point, so further pressure spikes could force the ending.";
+  }
+
+  if (pressure.deescalationOpportunityPercent >= 65) {
+    return "A visible off-ramp is open, and preserving it now matters more than squeezing out one more signal.";
+  }
+
+  if (pressure.decisiveOutcomePercent >= 60) {
+    return "The scenario is mature enough that the next exchange can visibly change who is ahead.";
+  }
+
+  return "The situation is still contestable, with room to build leverage before the crisis hardens.";
+}
+
 export function DerivedStatePanel({ derivedState, factionLabels }: DerivedStatePanelProps) {
   const leverage = Object.entries(derivedState.negotiationLeverage);
   const momentum = Object.entries(derivedState.factionMomentum);
@@ -23,26 +45,35 @@ export function DerivedStatePanel({ derivedState, factionLabels }: DerivedStateP
           Escalation risk {derivedState.escalationRiskPercent}%
         </span>
       </div>
+      <p className="highlight">{buildPressureSummary(derivedState)}</p>
       <div className="split">
         <div>
           <h3>Negotiation Leverage</h3>
-          <ul className="list">
-            {leverage.map(([key, value]) => (
-              <li className="list-item" key={key}>
-                {formatLabel(key, factionLabels)}: {value}
-              </li>
-            ))}
-          </ul>
+          {leverage.length ? (
+            <ul className="list">
+              {leverage.map(([key, value]) => (
+                <li className="list-item" key={key}>
+                  {formatLabel(key, factionLabels)}: {value}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted">No visible leverage tracks are currently active.</p>
+          )}
         </div>
         <div>
           <h3>Faction Momentum</h3>
-          <ul className="list">
-            {momentum.map(([key, value]) => (
-              <li className="list-item" key={key}>
-                {formatLabel(key, factionLabels)}: {value}
-              </li>
-            ))}
-          </ul>
+          {momentum.length ? (
+            <ul className="list">
+              {momentum.map(([key, value]) => (
+                <li className="list-item" key={key}>
+                  {formatLabel(key, factionLabels)}: {value}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted">No visible momentum shifts are currently active.</p>
+          )}
         </div>
       </div>
       <div className="subtle-divider" />
@@ -72,13 +103,17 @@ export function DerivedStatePanel({ derivedState, factionLabels }: DerivedStateP
       </div>
       <div className="subtle-divider" />
       <h3>Public Objective Progress</h3>
-      <ul className="list">
-        {objectiveProgress.map(([key, value]) => (
-          <li className="list-item" key={key}>
-            {formatLabel(key, factionLabels)}: {value}
-          </li>
-        ))}
-      </ul>
+      {objectiveProgress.length ? (
+        <ul className="list">
+          {objectiveProgress.map(([key, value]) => (
+            <li className="list-item" key={key}>
+              {formatLabel(key, factionLabels)}: {value}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted">Objective pressure has not separated visibly yet.</p>
+      )}
       {derivedState.outcome.title ? (
         <>
           <div className="subtle-divider" />
@@ -88,13 +123,17 @@ export function DerivedStatePanel({ derivedState, factionLabels }: DerivedStateP
       ) : null}
       <div className="subtle-divider" />
       <h3>Warnings</h3>
-      <ul className="list">
-        {derivedState.warnings.map((warning) => (
-          <li className="list-item" key={warning}>
-            {warning}
-          </li>
-        ))}
-      </ul>
+      {derivedState.warnings.length ? (
+        <ul className="list">
+          {derivedState.warnings.map((warning) => (
+            <li className="list-item" key={warning}>
+              {warning}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted">No immediate visible warnings are active.</p>
+      )}
     </section>
   );
 }

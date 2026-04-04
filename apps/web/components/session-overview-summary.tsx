@@ -52,6 +52,14 @@ function buildWhatMattersNow(game: Game) {
   return lines;
 }
 
+function buildExchangeLabel(game: Game) {
+  if (game.mode === "solo" && game.progression.model === "solo_round") {
+    return `After Round ${game.progression.completedRoundCount}`;
+  }
+
+  return `After turn ${game.lastResolution?.turnNumber ?? game.turnNumber}`;
+}
+
 export function SessionOverviewSummary({
   game,
   privateState,
@@ -77,12 +85,26 @@ export function SessionOverviewSummary({
       <div className="panel__header">
         <h2>What Matters Now</h2>
         <span className="pill">
-          {lastResolution ? `After turn ${lastResolution.turnNumber}` : "Opening state"}
+          {lastResolution ? buildExchangeLabel(game) : "Opening state"}
         </span>
       </div>
       <p className="highlight">
         {lastResolution?.llmNarrative.headline ?? game.state.public.headline}
       </p>
+      {lastResolution ? (
+        <div className="inline-meta">
+          <span className={`pill ${lastResolution.actor.playerRole === "ai" ? "pill--risk" : ""}`}>
+            Latest recorded action:{" "}
+            {lastResolution.actor.playerRole === "ai" ? "AI follow-up" : "Player move"}
+          </span>
+          <span className="pill">Action: {lastResolution.selectedAction.title}</span>
+          {game.mode === "solo" && game.progression.model === "solo_round" ? (
+            <span className="pill">
+              Solo pacing: 1 player action + 1 AI reply per round
+            </span>
+          ) : null}
+        </div>
+      ) : null}
       <ul className="list">
         {whatMattersNow.map((item) => (
           <li className="list-item" key={item}>
@@ -101,6 +123,19 @@ export function SessionOverviewSummary({
           <p>{formatRiskShift(game)}</p>
         </div>
       </div>
+      {game.state.public.revealedEvents.length ? (
+        <>
+          <div className="subtle-divider" />
+          <h3>Latest revealed developments</h3>
+          <div className="inline-meta">
+            {game.state.public.revealedEvents.slice(-3).map((eventId) => (
+              <span className="pill" key={eventId}>
+                {eventId}
+              </span>
+            ))}
+          </div>
+        </>
+      ) : null}
       {publicChanges.length ? (
         <>
           <div className="subtle-divider" />

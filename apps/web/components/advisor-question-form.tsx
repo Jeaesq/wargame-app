@@ -32,11 +32,15 @@ export function AdvisorQuestionForm({
       <label className="field">
         <span>Ask the advisor</span>
         <textarea
-          defaultValue="What is the main risk right now?"
+          defaultValue="Which visible option best fits this round, and what is the main tradeoff?"
           name="question"
           rows={3}
         />
       </label>
+      <p className="muted">
+        Good prompts: "What matters most this round?", "Which visible option best preserves the
+        off-ramp?", or "What is the main risk if I choose this move?"
+      </p>
       <div className="hero__actions">
         <button className="button" disabled={pending} type="submit">
           {pending ? "Asking..." : "Submit question"}

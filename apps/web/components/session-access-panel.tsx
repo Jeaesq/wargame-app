@@ -43,12 +43,13 @@ export function SessionAccessPanel({
         </span>
       </div>
       <p className="muted">
-        This is lightweight multiplayer scaffolding: the same session can later be opened from
-        different faction perspectives.
+        This view-switcher lets you review the session from the correct controlled faction
+        perspective without changing canonical state.
       </p>
       {claimableSeats.length > 0 ? (
         <p className="muted">
-          Future join flow placeholder: {claimableSeats.map((player) => getFactionName(game, player.factionId)).join(", ")} can become claimable faction seats for another logged-in user.
+          Additional seats exist for future multiplayer support, but solo readability remains the
+          current product priority.
         </p>
       ) : null}
       {controlledPlayers.length > 0 ? (

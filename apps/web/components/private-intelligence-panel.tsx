@@ -29,7 +29,7 @@ export function PrivateIntelligencePanel({
       <p className="highlight">{privateState.privateBriefing}</p>
       {recentUpdates.length ? (
         <>
-          <h3>Latest update</h3>
+          <h3>Latest private update from the exchange</h3>
           <ul className="list">
             {recentUpdates.map((item) => (
               <li className="list-item" key={item}>
@@ -41,20 +41,29 @@ export function PrivateIntelligencePanel({
         </>
       ) : null}
       <h3>Standing intelligence</h3>
-      <ul className="list">
-        {privateState.intelligence.map((item) => (
-          <li className="list-item" key={item}>
-            {item}
-          </li>
-        ))}
-      </ul>
+      {privateState.intelligence.length ? (
+        <ul className="list">
+          {privateState.intelligence.map((item) => (
+            <li className="list-item" key={item}>
+              {item}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted">No standing private intelligence is available yet.</p>
+      )}
       <div className="subtle-divider" />
+      <h3>Private posture markers</h3>
       <div className="inline-meta">
-        {privateState.secretFlags.map((flag) => (
-          <span className="pill" key={flag}>
-            {flag}
-          </span>
-        ))}
+        {privateState.secretFlags.length ? (
+          privateState.secretFlags.map((flag) => (
+            <span className="pill" key={flag}>
+              {flag}
+            </span>
+          ))
+        ) : (
+          <span className="muted">No private posture markers are active.</span>
+        )}
       </div>
     </section>
   );

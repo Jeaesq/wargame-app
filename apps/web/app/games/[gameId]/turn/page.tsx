@@ -6,7 +6,9 @@ import { PageHeader } from "../../../../components/page-header";
 import { PrivateIntelligencePanel } from "../../../../components/private-intelligence-panel";
 import { PublicStatePanel } from "../../../../components/public-state-panel";
 import { SessionAccessPanel } from "../../../../components/session-access-panel";
+import { SoloRoundPanel } from "../../../../components/solo-round-panel";
 import { TurnActionForm } from "../../../../components/turn-action-form";
+import { DerivedStatePanel } from "../../../../components/derived-state-panel";
 import { getGame } from "../../../../lib/api";
 import {
   buildFactionViewHref,
@@ -54,14 +56,17 @@ export default async function TurnPage({ params, searchParams }: TurnPageProps) 
     factionId: currentHumanPlayer?.factionId
   });
   const currentViewName = getFactionName(game, currentHumanPlayer?.factionId);
+  const factionLabels = Object.fromEntries(
+    game.factions.map((faction) => [faction.id, faction.name])
+  );
 
   return (
     <main className="page">
       <div className="section-stack">
         <PageHeader
           eyebrow="Turn View"
-          title={`Turn ${game.turnNumber} decision workspace`}
-          description={`A tighter operational view for reviewing public state, private intelligence, advisory guidance, and the current options list before submitting an action. Current faction view: ${currentViewName}.`}
+          title={`${game.mode === "solo" && game.progression.model === "solo_round" ? `Round ${game.progression.currentRound}` : `Turn ${game.turnNumber}`} decision workspace`}
+          description={`A tighter operational view for reviewing round pressure, public state, private intelligence, advisory guidance, and the current legal options before submitting an action. Current faction view: ${currentViewName}.`}
           actions={
             <Link className="button button--secondary" href={overviewHref}>
               Back to session overview
@@ -75,9 +80,18 @@ export default async function TurnPage({ params, searchParams }: TurnPageProps) 
               pathname={`/games/${gameId}/turn`}
               selectedPlayerId={currentHumanPlayer?.id}
             />
+            <SoloRoundPanel
+              game={game}
+              context="turn"
+              factionLabels={factionLabels}
+            />
             <TurnActionForm game={game} />
             <OptionsList options={privateState?.availableOptions ?? []} />
             <PublicStatePanel game={game} />
+            <DerivedStatePanel
+              derivedState={game.state.derived}
+              factionLabels={factionLabels}
+            />
           </div>
           <div className="section-stack">
             <PrivateIntelligencePanel
@@ -89,6 +103,7 @@ export default async function TurnPage({ params, searchParams }: TurnPageProps) 
               factionId={currentHumanPlayer?.factionId ?? null}
               gameId={game.id}
               playerId={currentHumanPlayer?.id}
+              visibleOptions={privateState?.availableOptions ?? []}
             />
           </div>
         </div>

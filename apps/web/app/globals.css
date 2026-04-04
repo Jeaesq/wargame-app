@@ -260,6 +260,23 @@ textarea {
   border-left: 3px solid rgba(36, 48, 58, 0.24);
 }
 
+.history-item--grouped,
+.solo-round-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.history-round-steps {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.history-step-card {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.5);
+  padding: 0.9rem;
+}
+
 .option-card {
   display: grid;
   gap: 0.55rem;
@@ -312,6 +329,10 @@ textarea {
 .highlight {
   border-left: 3px solid var(--accent);
   padding-left: 0.8rem;
+}
+
+.solo-round-panel .highlight {
+  margin: 0;
 }
 
 .split {

@@ -5,6 +5,11 @@ type OptionsListProps = {
 };
 
 export function OptionsList({ options }: OptionsListProps) {
+  const topRecommendation = [...options]
+    .filter((option) => option.recommendationPercent !== null)
+    .sort((left, right) => (right.recommendationPercent ?? 0) - (left.recommendationPercent ?? 0))[0]
+    ?.id;
+
   return (
     <section className="panel">
       <div className="panel__header">
@@ -16,11 +21,14 @@ export function OptionsList({ options }: OptionsListProps) {
           <article className="option-card" key={option.id}>
             <div className="panel__header">
               <h3>{option.title}</h3>
-              <span className="pill">
-                {typeof option.metadata.presentationCategory === "string"
-                  ? option.metadata.presentationCategory
-                  : option.kind.replaceAll("_", " ")}
-              </span>
+              <div className="inline-meta">
+                <span className="pill">
+                  {typeof option.metadata.presentationCategory === "string"
+                    ? option.metadata.presentationCategory
+                    : option.kind.replaceAll("_", " ")}
+                </span>
+                {option.id === topRecommendation ? <span className="pill">Top visible advisory</span> : null}
+              </div>
             </div>
             <p>{option.summary}</p>
             {option.detail ? <p className="muted">{option.detail}</p> : null}
@@ -29,7 +37,15 @@ export function OptionsList({ options }: OptionsListProps) {
               <span className="pill">
                 Advisory: {option.recommendationPercent ?? "n/a"}%
               </span>
+              {option.requirementTags.length ? (
+                <span className="pill">Requirements: {option.requirementTags.join(", ")}</span>
+              ) : null}
             </div>
+            {option.consequenceHints.length ? (
+              <p className="muted">
+                Visible tradeoffs: {option.consequenceHints.slice(0, 3).join(" · ")}
+              </p>
+            ) : null}
           </article>
         ))}
       </div>

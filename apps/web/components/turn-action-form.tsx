@@ -27,6 +27,7 @@ export function TurnActionForm({ game }: TurnActionFormProps) {
       privateState?.availableOptions.find((option) => option.id === selectedOptionId) ?? null,
     [privateState?.availableOptions, selectedOptionId]
   );
+  const isSoloRound = game.mode === "solo" && game.progression.model === "solo_round";
 
   useEffect(() => {
     if (state.redirectTo) {
@@ -52,6 +53,12 @@ export function TurnActionForm({ game }: TurnActionFormProps) {
           {actingPlayer.name} · {actingPlayer.factionId}
         </span>
       </div>
+      {isSoloRound ? (
+        <p className="muted">
+          This choice resolves your visible step for the current round. The AI follow-up will then
+          resolve the opposing move before the next round begins.
+        </p>
+      ) : null}
       {game.status === "completed" || game.state.derived.outcome.status === "ended" ? (
         <>
           <p className="highlight">
@@ -100,6 +107,21 @@ export function TurnActionForm({ game }: TurnActionFormProps) {
             <p>{selectedOption.title}</p>
             <p className="muted">{selectedOption.summary}</p>
             {selectedOption.detail ? <p className="muted">{selectedOption.detail}</p> : null}
+            <div className="inline-meta">
+              <span className="pill">
+                Advisory: {selectedOption.recommendationPercent ?? "n/a"}%
+              </span>
+              {selectedOption.requirementTags.length ? (
+                <span className="pill">
+                  Requirements: {selectedOption.requirementTags.join(", ")}
+                </span>
+              ) : null}
+            </div>
+            {selectedOption.consequenceHints.length ? (
+              <p className="muted">
+                Visible tradeoffs: {selectedOption.consequenceHints.slice(0, 3).join(" · ")}
+              </p>
+            ) : null}
           </div>
         ) : (
           <p className="muted">Select one option before confirming your turn.</p>
@@ -120,7 +142,9 @@ export function TurnActionForm({ game }: TurnActionFormProps) {
               : game.status === "completed" || game.state.derived.outcome.status === "ended"
                 ? "Session complete"
               : selectedOption
-                ? "Confirm and submit action"
+                ? isSoloRound
+                  ? "Commit player move and resolve round"
+                  : "Confirm and submit action"
                 : "Select an option first"}
           </button>
         </div>
