@@ -8,17 +8,23 @@ import { submitTurnAction, type TurnFormActionState } from "../app/games/[gameId
 const initialState: TurnFormActionState = {};
 
 type TurnActionFormProps = {
+  actingPlayerId?: string | null;
   game: Game;
 };
 
-export function TurnActionForm({ game }: TurnActionFormProps) {
+export function TurnActionForm({ actingPlayerId, game }: TurnActionFormProps) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(submitTurnAction, initialState);
   const [selectedOptionId, setSelectedOptionId] = useState<string>("");
   const actingPlayer =
+    (actingPlayerId ? game.players.find((player) => player.id === actingPlayerId) : null) ??
+    (game.state.privateByPlayer[0]?.playerId
+      ? game.players.find((player) => player.id === game.state.privateByPlayer[0]?.playerId) ?? null
+      : null) ??
     game.players.find(
       (player) => player.role === "human" && player.factionId === game.currentFactionId
-    ) ?? game.players.find((player) => player.role === "human");
+    ) ??
+    game.players.find((player) => player.role === "human");
   const privateState = game.state.privateByPlayer.find(
     (state) => state.playerId === actingPlayer?.id
   );

@@ -1,6 +1,7 @@
 "use server";
 
 import { submitTurn } from "../../../../lib/api";
+import { buildFactionViewHref } from "../../../../lib/session-access";
 
 export type TurnFormActionState = {
   error?: string;
@@ -28,7 +29,11 @@ export async function submitTurnAction(
     });
 
     return {
-      redirectTo: `/games/${gameId}`
+      redirectTo: buildFactionViewHref({
+        pathname: `/games/${gameId}`,
+        playerId,
+        factionId
+      })
     };
   } catch (error) {
     return {

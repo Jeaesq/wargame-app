@@ -32,6 +32,20 @@ export function getSelectedPlayerView(game: Game, playerId?: string | null): Pla
   return controlledPlayers[0] ?? null;
 }
 
+export function getProjectedPlayerView(game: Game, playerId?: string | null): Player | null {
+  return (
+    getSelectedPlayerView(game, playerId) ??
+    (game.state.privateByPlayer[0]?.playerId
+      ? game.players.find((player) => player.id === game.state.privateByPlayer[0]?.playerId) ?? null
+      : null) ??
+    game.players.find(
+      (player) => player.role === "human" && player.factionId === game.currentFactionId
+    ) ??
+    game.players.find((player) => player.role === "human") ??
+    null
+  );
+}
+
 export function getFactionName(game: Game, factionId?: string | null): string {
   if (!factionId) {
     return "Public session";

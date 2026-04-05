@@ -9,7 +9,7 @@
     "dev": "tsx watch src/index.ts",
     "eval": "npm run build -w @wargame/shared && node --import tsx src/evals/run-evals.ts",
     "start": "node dist/index.js",
-    "test": "npm run build -w @wargame/shared && node --import tsx --test \"src/**/*.test.ts\"",
+    "test": "npm run build -w @wargame/shared && node --import tsx scripts/run-tests.ts",
     "typecheck": "npm run build -w @wargame/shared && tsc --noEmit"
   },
   "dependencies": {

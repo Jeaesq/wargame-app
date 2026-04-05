@@ -1,13 +1,43 @@
 export function logInfo(message: string, details?: Record<string, unknown>) {
+  if (!shouldLog("INFO")) {
+    return;
+  }
+
   console.log(formatLog("INFO", message, details));
 }
 
 export function logError(message: string, details?: Record<string, unknown>) {
+  if (!shouldLog("ERROR")) {
+    return;
+  }
+
   console.error(formatLog("ERROR", message, details));
 }
 
 export function logWarn(message: string, details?: Record<string, unknown>) {
+  if (!shouldLog("WARN")) {
+    return;
+  }
+
   console.warn(formatLog("WARN", message, details));
+}
+
+function shouldLog(level: "INFO" | "WARN" | "ERROR") {
+  const configuredLevel = process.env.WARGAME_LOG_LEVEL?.toLowerCase() ?? "info";
+
+  if (configuredLevel === "silent") {
+    return false;
+  }
+
+  if (configuredLevel === "error") {
+    return level === "ERROR";
+  }
+
+  if (configuredLevel === "warn") {
+    return level === "WARN" || level === "ERROR";
+  }
+
+  return true;
 }
 
 function formatLog(

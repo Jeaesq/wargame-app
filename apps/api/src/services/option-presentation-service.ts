@@ -66,6 +66,19 @@ function getPacingBias(targetGameLength: TargetGameLength): number {
   }
 }
 
+function isHighCostEconomicDisruptionOption(option: ChoiceOption): boolean {
+  if (getPresentationCategory(option) !== "economic") {
+    return false;
+  }
+
+  const hasHighCostHint = option.consequenceHints.includes("high-cost");
+  const hasStrongVisibleFriction = Object.values(option.effectProfile.visibleTrackDeltas).some(
+    (delta) => Math.abs(delta) >= 4
+  );
+
+  return hasHighCostHint && hasStrongVisibleFriction;
+}
+
 function buildPrimaryUse(option: ChoiceOption, factionId: string): string {
   const leverageGain = option.effectProfile.negotiationLeverageDeltas[factionId] ?? 0;
   const momentumGain = option.effectProfile.factionMomentumDeltas[factionId] ?? 0;
@@ -218,6 +231,10 @@ function scoreOption(input: {
 
   if (category === "economic" && publicState.visibleTracks.diplomaticPressure >= 55) {
     score += 4;
+  }
+
+  if (targetGameLength === "short" && isHighCostEconomicDisruptionOption(option)) {
+    score += 8;
   }
 
   return score;

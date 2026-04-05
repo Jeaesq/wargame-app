@@ -827,6 +827,11 @@ export function createSuezMvpScenarioDefinition() {
           medium: 7,
           long: 9
         },
+        catastrophicMinMaturityByLength: {
+          short: 50,
+          medium: 24,
+          long: 24
+        },
         factionProgressModels: {
           "faction-anglo-french": {
             leverageWeight: 0.28,

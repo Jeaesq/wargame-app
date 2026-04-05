@@ -13,7 +13,7 @@ import { getGame } from "../../../../lib/api";
 import {
   buildFactionViewHref,
   getFactionName,
-  getSelectedPlayerView
+  getProjectedPlayerView
 } from "../../../../lib/session-access";
 
 export const dynamic = "force-dynamic";
@@ -42,10 +42,7 @@ export default async function TurnPage({ params, searchParams }: TurnPageProps) 
     notFound();
   }
 
-  const currentHumanPlayer =
-    getSelectedPlayerView(game, selectedPlayerId) ??
-    game.players.find((player) => player.role === "human" && player.factionId === game.currentFactionId) ??
-    game.players.find((player) => player.role === "human");
+  const currentHumanPlayer = getProjectedPlayerView(game, selectedPlayerId);
   const privateState = game.state.privateByPlayer.find(
     (state) => state.playerId === currentHumanPlayer?.id
   ) ?? null;
@@ -85,7 +82,10 @@ export default async function TurnPage({ params, searchParams }: TurnPageProps) 
               context="turn"
               factionLabels={factionLabels}
             />
-            <TurnActionForm game={game} />
+            <TurnActionForm
+              actingPlayerId={currentHumanPlayer?.id}
+              game={game}
+            />
             <OptionsList options={privateState?.availableOptions ?? []} />
             <PublicStatePanel game={game} />
             <DerivedStatePanel

@@ -52,11 +52,11 @@ export function AdvisorChatPanel({
             <div className="chat-item">
               <strong>Recommended visible options</strong>
               <div className="section-stack">
-                {answer.recommendedOptionIds.map((optionId) => {
+                {answer.recommendedOptionIds.map((optionId, index) => {
                   const option = optionById.get(optionId);
 
                   return (
-                    <div className="option-card" key={optionId}>
+                    <div className="option-card" key={`${optionId}-${index}`}>
                       <div className="panel__header">
                         <strong>{option?.title ?? optionId}</strong>
                         <span className="pill">
@@ -75,8 +75,8 @@ export function AdvisorChatPanel({
           <div className="chat-item">
             <strong>Rationale</strong>
             <ul className="list">
-              {answer.rationale.map((item) => (
-                <li className="list-item" key={item}>
+              {answer.rationale.map((item, index) => (
+                <li className="list-item" key={`rationale-${index}`}>
                   {item}
                 </li>
               ))}
@@ -93,8 +93,8 @@ export function AdvisorChatPanel({
           <div className="chat-item">
             <strong>Risk Notes</strong>
             <ul className="list">
-              {answer.riskNotes.map((item) => (
-                <li className="list-item" key={item}>
+              {answer.riskNotes.map((item, index) => (
+                <li className="list-item" key={`risk-${index}`}>
                   {item}
                 </li>
               ))}
@@ -104,8 +104,8 @@ export function AdvisorChatPanel({
             <div className="chat-item">
               <strong>Stated assumptions</strong>
               <ul className="list">
-                {answer.assumptions.map((item) => (
-                  <li className="list-item" key={item}>
+                {answer.assumptions.map((item, index) => (
+                  <li className="list-item" key={`assumption-${index}`}>
                     {item}
                   </li>
                 ))}

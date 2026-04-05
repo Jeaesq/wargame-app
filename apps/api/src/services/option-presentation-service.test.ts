@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { ScenarioDefinition } from "@wargame/shared";
 import { buildAvailableOptions } from "./option-presentation-service.js";
+import { createSuezMvpScenarioDefinition } from "../scenarios/suez-mvp.js";
 
 const scenario: ScenarioDefinition = {
   id: "scenario-cold-war-berlin-mvp",
@@ -266,4 +267,36 @@ test("available options stay concise, diverse, and analytically explained", () =
     options.every((option) => typeof option.detail === "string" && option.detail.includes("Why now:")),
     true
   );
+});
+
+test("short Suez Egypt openings can surface a high-cost canal disruption line", () => {
+  const suezScenario = createSuezMvpScenarioDefinition();
+  const egyptPrivateState =
+    suezScenario.openingState.privateStates.find(
+      (privateState) => privateState.factionId === "faction-egypt"
+    ) ?? null;
+
+  const options = buildAvailableOptions({
+    scenario: suezScenario,
+    factionId: "faction-egypt",
+    publicState: {
+      worldTension: suezScenario.openingState.publicState.worldTension,
+      visibleTracks: suezScenario.openingState.publicState.visibleTracks,
+      publicFlags: suezScenario.openingState.publicState.publicFlags,
+      revealedEvents: suezScenario.openingState.publicState.revealedEvents
+    },
+    privateState: egyptPrivateState
+      ? {
+          secretFlags: egyptPrivateState.secretFlags,
+          hiddenTracks: egyptPrivateState.hiddenTracks,
+          metadata: egyptPrivateState.metadata
+        }
+      : null,
+    derivedState: suezScenario.openingState.derivedState,
+    targetGameLength: "short",
+    currentRound: 1
+  });
+
+  assert.equal(options.length, 4);
+  assert.equal(options.some((option) => option.id === "option-egypt-canal-disruption"), true);
 });

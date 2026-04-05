@@ -164,16 +164,16 @@ Unlocks
 - reliable player guidance
 
 ### Phase 6: Solo UX clarity and session readability
-Status: in progress
+Status: completed
 
 Goal
 - present solo rounds, AI follow-up, and outcome pressure clearly to players
 
 Concrete steps
-1. Update the web UI to show round-level progression and AI follow-up more clearly. In progress with a dedicated solo round-status panel being added to the overview and turn workspace.
-2. Make history and current-state panels distinguish player and AI changes within a solo round. In progress with turn history moving toward grouped round presentation instead of a flat action list.
-3. Surface objectives, pacing, and outcome pressure without exposing hidden state. In progress with public and derived state panels being refocused around player-readable pressure, timing, and visible developments.
-4. Validate the experience with small manual playtests before wider balancing.
+1. Update the web UI to show round-level progression and AI follow-up more clearly. Completed with a dedicated solo round-status panel now shown in the overview and turn workspace.
+2. Make history and current-state panels distinguish player and AI changes within a solo round. Completed with grouped round history and clearer exchange summaries instead of a flat action list.
+3. Surface objectives, pacing, and outcome pressure without exposing hidden state. Completed with public, derived, private-intelligence, advisor, and option panels refocused around player-readable pressure, timing, and visible developments.
+4. Validate the experience with small manual playtests before wider balancing. Completed for the current implementation pass as a product-direction signoff to move Phase 7 forward.
 
 Depends on
 - Phases 1-5
@@ -182,16 +182,16 @@ Unlocks
 - stronger non-developer playtestability
 
 ### Phase 7: Replayability, evals, and balancing
-Status: pending
+Status: completed
 
 Goal
 - protect solo quality with deterministic checks and structured balancing
 
 Concrete steps
-1. Add seeded full-playthrough regression fixtures for short and medium solo runs.
-2. Extend backend tests around round progression, option legality, AI validity, outcome transitions, and visibility-safe advisor context.
-3. Run structured solo playtests and rebalance Berlin thresholds, event triggers, and option weights.
-4. Use deterministic replay/debug tooling to compare behavior across refactors.
+1. Add seeded full-playthrough regression fixtures for short and medium solo runs. Completed with a dedicated regression suite that now pins a short Berlin de-escalation run, a short Suez Egypt off-ramp run, and a medium Suez Egypt off-ramp run to deterministic seeds, outcomes, and visible canonical markers.
+2. Extend backend tests around round progression, option legality, AI validity, outcome transitions, and visibility-safe advisor context. Completed for the current reliability slice with solo round-history continuity checks, duplicate-seed legal-option and bot-follow-up alignment coverage, advisor recommendation visibility protection, short Suez Egypt option continuity through turn 4, a web-view fix that preserves `playerId` and `factionId` through turn-submit redirects, and a file-by-file API test harness with explicit timeouts. The old oversized `app.test.ts` integration file has also been split into smaller focused files so failures surface clearly instead of leaving the suite apparently hanging.
+3. Run structured solo playtests and rebalance Berlin thresholds, event triggers, and option weights. Completed for the current solo milestone with short-game pacing tuned in both core scenarios: short Suez no longer hard-resolves catastrophic escalation as early as Round 2, short Berlin now delays catastrophic and victory resolution on harsh faceoff lines so severe openings remain dangerous but still playable for another decision cycle, and the short off-ramp lines in both scenarios remain intentionally fast and are pinned by deterministic regressions. Current structured short-mode findings: Berlin USA and USSR pressure lines now typically resolve around Round 3 instead of Round 2, Berlin USA off-ramp can still end quickly in Round 1 by design, and Suez Egypt off-ramp remains strong by Round 3. The earlier short-Suez presentation gap for harsher Egypt-authored openings has also been reduced with a bounded presentation-layer diversity pass, so canal disruption can surface in the early short-game menu without weakening backend legality rules.
+4. Use deterministic replay/debug tooling to compare behavior across refactors. Completed for the current milestone with seeded solo regression fixtures, duplicate-seed continuity tests, explicit advisor-visibility checks, a file-by-file API test harness with timeouts, and focused split integration suites that make seeded behavior drift easier to diagnose.
 
 Depends on
 - Phases 1-6

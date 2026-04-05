@@ -14,7 +14,7 @@ import { getGame, getScenarios, getTurnHistory } from "../../../lib/api";
 import {
   buildFactionViewHref,
   getFactionName,
-  getSelectedPlayerView
+  getProjectedPlayerView
 } from "../../../lib/session-access";
 
 export const dynamic = "force-dynamic";
@@ -48,10 +48,7 @@ export default async function GameDetailPage({
 
   const [scenarios, turnHistory] = await Promise.all([getScenarios(), getTurnHistory(gameId)]);
   const scenario = scenarios.find((item) => item.id === game.scenarioId);
-  const currentHumanPlayer =
-    getSelectedPlayerView(game, selectedPlayerId) ??
-    game.players.find((player) => player.role === "human" && player.factionId === game.currentFactionId) ??
-    game.players.find((player) => player.role === "human");
+  const currentHumanPlayer = getProjectedPlayerView(game, selectedPlayerId);
   const privateState = game.state.privateByPlayer.find(
     (state) => state.playerId === currentHumanPlayer?.id
   ) ?? null;

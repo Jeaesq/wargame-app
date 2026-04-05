@@ -35,6 +35,9 @@ type FactionProgressModel = {
 
 type ParsedOutcomeModel = {
   guidanceRoundsByLength: Record<TargetGameLength, number>;
+  catastrophicMinMaturityByLength: Record<TargetGameLength, number>;
+  strategicMinMaturityByLength: Record<TargetGameLength, number>;
+  partialMinMaturityByLength: Record<TargetGameLength, number>;
   factionProgressModels: Record<string, FactionProgressModel>;
   conditionModifiers: ParsedOutcomeConditionModifier[];
   decisiveLeadWeight: number;
@@ -164,12 +167,76 @@ function getOutcomeModel(scenario: ScenarioDefinition): ParsedOutcomeModel {
   const conditionModifiersCandidate = Array.isArray(candidate.conditionModifiers)
     ? candidate.conditionModifiers
     : [];
+  const catastrophicMinMaturityCandidate =
+    typeof candidate.catastrophicMinMaturityByLength === "object" &&
+    candidate.catastrophicMinMaturityByLength !== null &&
+    !Array.isArray(candidate.catastrophicMinMaturityByLength)
+      ? (candidate.catastrophicMinMaturityByLength as Record<string, unknown>)
+      : {};
+  const strategicMinMaturityCandidate =
+    typeof candidate.strategicMinMaturityByLength === "object" &&
+    candidate.strategicMinMaturityByLength !== null &&
+    !Array.isArray(candidate.strategicMinMaturityByLength)
+      ? (candidate.strategicMinMaturityByLength as Record<string, unknown>)
+      : {};
+  const partialMinMaturityCandidate =
+    typeof candidate.partialMinMaturityByLength === "object" &&
+    candidate.partialMinMaturityByLength !== null &&
+    !Array.isArray(candidate.partialMinMaturityByLength)
+      ? (candidate.partialMinMaturityByLength as Record<string, unknown>)
+      : {};
+  const minResolutionMaturityPercent =
+    typeof candidate.minResolutionMaturityPercent === "number"
+      ? candidate.minResolutionMaturityPercent
+      : 25;
 
   return {
     guidanceRoundsByLength: {
       short: typeof guidanceCandidate.short === "number" ? guidanceCandidate.short : 5,
       medium: typeof guidanceCandidate.medium === "number" ? guidanceCandidate.medium : 7,
       long: typeof guidanceCandidate.long === "number" ? guidanceCandidate.long : 9
+    },
+    catastrophicMinMaturityByLength: {
+      short:
+        typeof catastrophicMinMaturityCandidate.short === "number"
+          ? catastrophicMinMaturityCandidate.short
+          : minResolutionMaturityPercent,
+      medium:
+        typeof catastrophicMinMaturityCandidate.medium === "number"
+          ? catastrophicMinMaturityCandidate.medium
+          : minResolutionMaturityPercent,
+      long:
+        typeof catastrophicMinMaturityCandidate.long === "number"
+          ? catastrophicMinMaturityCandidate.long
+          : minResolutionMaturityPercent
+    },
+    strategicMinMaturityByLength: {
+      short:
+        typeof strategicMinMaturityCandidate.short === "number"
+          ? strategicMinMaturityCandidate.short
+          : minResolutionMaturityPercent + 10,
+      medium:
+        typeof strategicMinMaturityCandidate.medium === "number"
+          ? strategicMinMaturityCandidate.medium
+          : minResolutionMaturityPercent + 10,
+      long:
+        typeof strategicMinMaturityCandidate.long === "number"
+          ? strategicMinMaturityCandidate.long
+          : minResolutionMaturityPercent + 10
+    },
+    partialMinMaturityByLength: {
+      short:
+        typeof partialMinMaturityCandidate.short === "number"
+          ? partialMinMaturityCandidate.short
+          : minResolutionMaturityPercent + 3,
+      medium:
+        typeof partialMinMaturityCandidate.medium === "number"
+          ? partialMinMaturityCandidate.medium
+          : minResolutionMaturityPercent + 3,
+      long:
+        typeof partialMinMaturityCandidate.long === "number"
+          ? partialMinMaturityCandidate.long
+          : minResolutionMaturityPercent + 3
     },
     factionProgressModels: Object.fromEntries(
       scenario.factions.map((faction) => [
@@ -281,9 +348,7 @@ function getOutcomeModel(scenario: ScenarioDefinition): ParsedOutcomeModel {
         ? candidate.deescalationMaturityDivisor
         : 10,
     minResolutionMaturityPercent:
-      typeof candidate.minResolutionMaturityPercent === "number"
-        ? candidate.minResolutionMaturityPercent
-        : 25,
+      minResolutionMaturityPercent,
     stalemateMaturityThreshold:
       typeof candidate.stalemateMaturityThreshold === "number"
         ? candidate.stalemateMaturityThreshold
@@ -515,7 +580,7 @@ export function evaluateSessionOutcome(
         outcomeModel.catastrophicBaseThreshold -
           Math.floor(maturityPercent / outcomeModel.catastrophicMaturityDivisor)
       ) &&
-    maturityPercent >= outcomeModel.minResolutionMaturityPercent
+    maturityPercent >= outcomeModel.catastrophicMinMaturityByLength[input.targetGameLength]
   ) {
     category = "catastrophic_escalation";
   } else if (
@@ -533,14 +598,14 @@ export function evaluateSessionOutcome(
   } else if (
     leaderProgress >= strategicThreshold &&
     lead >= strategicLeadThreshold &&
-    maturityPercent >= outcomeModel.minResolutionMaturityPercent + 10
+    maturityPercent >= outcomeModel.strategicMinMaturityByLength[input.targetGameLength]
   ) {
     category = "strategic_success";
     winningFactionId = leaderFactionId;
   } else if (
     leaderProgress >= partialThreshold &&
     lead >= partialLeadThreshold &&
-    maturityPercent >= outcomeModel.minResolutionMaturityPercent + 3 &&
+    maturityPercent >= outcomeModel.partialMinMaturityByLength[input.targetGameLength] &&
     decisiveOutcomePercent >= 55
   ) {
     category = "partial_success";

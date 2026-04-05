@@ -522,3 +522,65 @@ test("metadata-driven Suez outcome can settle into stalemate late in a balanced 
   assert.equal(outcome.status, "ended");
   assert.equal(outcome.category, "stalemate");
 });
+
+test("short Suez catastrophic endings stay live but do not hard-resolve before the later short-game window", () => {
+  const outcome = evaluateSessionOutcome({
+    scenario: suezScenario,
+    targetGameLength: "short",
+    turnNumber: 3,
+    worldTension: 89,
+    escalationRiskPercent: 90,
+    visibleTracks: {
+      canalControl: 45,
+      internationalPressure: 82,
+      militaryTempo: 88
+    },
+    publicFlags: ["intervention-window-hardening"],
+    revealedEvents: ["suez-intervention-window-hardens"],
+    negotiationLeverage: {
+      "faction-anglo-french": 56,
+      "faction-egypt": 49
+    },
+    factionMomentum: {
+      "faction-anglo-french": 60,
+      "faction-egypt": 46
+    },
+    selectedOption: suezOption
+  });
+
+  assert.equal(outcome.pressure.maturityPercent, 40);
+  assert.equal(outcome.pressure.catastrophicRiskPercent >= 90, true);
+  assert.equal(outcome.status, "ongoing");
+  assert.equal(outcome.category, null);
+});
+
+test("short Berlin catastrophic endings stay live through the first severe short-game exchange", () => {
+  const outcome = evaluateSessionOutcome({
+    scenario: berlinScenario,
+    targetGameLength: "short",
+    turnNumber: 3,
+    worldTension: 88,
+    escalationRiskPercent: 84,
+    visibleTracks: {
+      diplomaticPressure: 76,
+      militaryPosture: 86,
+      globalAttention: 79
+    },
+    publicFlags: ["checkpoint-faceoff-active"],
+    revealedEvents: ["berlin-checkpoint-faceoff-intensifies"],
+    negotiationLeverage: {
+      "faction-usa": 48,
+      "faction-ussr": 66
+    },
+    factionMomentum: {
+      "faction-usa": 42,
+      "faction-ussr": 71
+    },
+    selectedOption
+  });
+
+  assert.equal(outcome.pressure.maturityPercent, 50);
+  assert.equal(outcome.pressure.catastrophicRiskPercent >= 80, true);
+  assert.equal(outcome.status, "ongoing");
+  assert.equal(outcome.category, null);
+});

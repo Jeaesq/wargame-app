@@ -929,6 +929,21 @@ export function createColdWarMvpScenarioDefinition() {
           medium: 6,
           long: 8
         },
+        catastrophicMinMaturityByLength: {
+          short: 75,
+          medium: 22,
+          long: 22
+        },
+        strategicMinMaturityByLength: {
+          short: 75,
+          medium: 32,
+          long: 32
+        },
+        partialMinMaturityByLength: {
+          short: 75,
+          medium: 25,
+          long: 25
+        },
         factionProgressModels: {
           "faction-usa": {
             leverageWeight: 0.34,
